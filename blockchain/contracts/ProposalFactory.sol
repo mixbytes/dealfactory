@@ -4,7 +4,7 @@ import "../node_modules/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "./Proposal.sol";
 
 contract ProposalFactory is Ownable {
-    address generalArbiter;
+    address public generalArbiter;
 
     event ProposalCreated(address customer, address proposalAddress);
 
@@ -17,5 +17,6 @@ contract ProposalFactory is Ownable {
         emit ProposalCreated(msg.sender, address(newProposal));
     }
 
-    //register ProposalAbstraction - look up uniswap example
+    //register ProposalAbstraction - попробуй сделать обновляемость
+    // через использование абстракции/интерфейса пропосала, но не конкретной реализации
 }

@@ -1,3 +1,4 @@
+const truffleAsssert = require('truffle-assertions');
 const ProposalFactory = artifacts.require("ProposalFactory");
 const ProposalContract = artifacts.require("Proposal");
 
@@ -12,17 +13,24 @@ contract('ProposalFactory test', async accounts => {
     const ARBITER = accounts[5];
 
     it('basic test of factory deploy', async() => {
+        // created factory
         let proposalFactory = await ProposalFactory.new(ARBITER, {from: FACTORY_OWNER});
-        console.debug('Factory address: ', proposalFactory.address)
 
+        // checked factory ownership
         let factoryOwnerGotByCall = await proposalFactory.owner();
         assert.equal(factoryOwnerGotByCall, FACTORY_OWNER);
 
-        // use web3 to get logs
-        let proposal_creation_tx = await proposalFactory.createProposal({from: CUSTOMER_1});
-        let proposal_contract_address = proposal_creation_tx.logs[1].address; 
-        let proposal_contract = await ProposalContract.at(proposal_contract_address);
-        let proposal_owner = await proposal_contract.owner();
-        assert.equal(proposal_owner, CUSTOMER_1);
+        // create proposal
+        let proposalCreationTx = await proposalFactory.createProposal({from: CUSTOMER_1});
+        let proposalContractAddress = proposalCreationTx.logs[proposalCreationTx.logs.length - 1].args.proposalAddress; // too explicit, especially index, use promise
+        truffleAsssert.eventEmitted(proposalCreationTx, 'ProposalCreated', (res) => {
+            console.log(res)
+            return res.proposalAddress == proposalContractAddress;
+        });
+        
+        // check proposal ownership
+        let proposalContract = await ProposalContract.at(proposalContractAddress);
+        let proposalOwner = await proposalContract.owner();
+        assert.equal(proposalOwner, CUSTOMER_1);
     });
 })
