@@ -12,14 +12,14 @@ contract('ProposalFactory test', async accounts => {
     const ARBITER = accounts[5];
 
     it('basic test of factory deploy', async() => {
-        let proposal_factory = await ProposalFactory.new(ARBITER, {from: FACTORY_OWNER});
-        console.debug('Factory address: ', proposal_factory.address)
+        let proposalFactory = await ProposalFactory.new(ARBITER, {from: FACTORY_OWNER});
+        console.debug('Factory address: ', proposalFactory.address)
 
-        let factory_owner = await proposal_factory.owner();
-        assert.equal(factory_owner, FACTORY_OWNER);
+        let factoryOwnerGotByCall = await proposalFactory.owner();
+        assert.equal(factoryOwnerGotByCall, FACTORY_OWNER);
 
         // use web3 to get logs
-        let proposal_creation_tx = await proposal_factory.createProposal({from: CUSTOMER_1});
+        let proposal_creation_tx = await proposalFactory.createProposal({from: CUSTOMER_1});
         let proposal_contract_address = proposal_creation_tx.logs[1].address; 
         let proposal_contract = await ProposalContract.at(proposal_contract_address);
         let proposal_owner = await proposal_contract.owner();
