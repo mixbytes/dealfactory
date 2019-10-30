@@ -1,0 +1,37 @@
+{
+  "name": "pchela-computing",
+  "version": "0.0.1",
+  "description": "outsource and pay for rendering tasks using Ethereum smart-contracts",
+  "main": "index.js",
+  "scripts": {
+    "test": "truffle test"
+  },
+  "dependencies": {
+    "diff": "4.0.1",
+    "mem": "5.1.1",
+    "chai": "4.2.0",
+    "openzeppelin-solidity": "2.4.0",
+    "openzeppelin-test-helpers": "0.5.1",
+    "dotenv": "8.2.0",
+    "truffle": "5.0.42"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mixbytes/renderhash.git"
+  },
+  "keywords": [
+    "IPFS",
+    "Factory",
+    "Arbiter",
+    "Rendering",
+    "tasks",
+    "Ethereum",
+    "smart-contract"
+  ],
+  "author": "SabaunT",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/mixbytes/renderhash/issues"
+  },
+  "homepage": "https://github.com/mixbytes/renderhash#readme"
+}
