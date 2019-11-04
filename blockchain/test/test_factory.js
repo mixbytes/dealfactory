@@ -1,6 +1,8 @@
 const truffleAsssert = require('truffle-assertions');
 const ProposalFactory = artifacts.require("ProposalFactory");
 const ProposalContract = artifacts.require("Proposal");
+const ProposalTest = artifacts.require("ProposalTested");
+
 
 
 contract('ProposalFactory test', async accounts => {
@@ -19,6 +21,14 @@ contract('ProposalFactory test', async accounts => {
         // checked factory ownership
         let factoryOwnerGotByCall = await proposalFactory.owner();
         assert.equal(factoryOwnerGotByCall, FACTORY_OWNER);
+
+        // register proposal contract
+        await proposalFactory.registerProposalTemplate()
+        /*
+        деплой переделываем под: деплоишь код с хардкодом в конструкторе
+        используешь сэтап
+        на это dev 295 закончен
+        */
 
         // create proposal
         let proposalCreationTx = await proposalFactory.createProposal({from: CUSTOMER_1});
