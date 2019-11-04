@@ -1,0 +1,121 @@
+pragma solidity >=0.4.22 <0.6.0;
+
+
+contract AbstractProposal {
+    address public arbiter; // private?
+
+    constructor(address _arbiter) internal {
+        arbiter = _arbiter;
+    }
+
+    function getSomeValue() public pure returns(uint256);
+    function setupProposal(address _arbiter) public;
+}
+
+
+contract Proposal is AbstractProposal {
+
+    constructor(address _arbiter) public AbstractProposal(_arbiter) {}
+
+    function getSomeValue() public pure returns(uint256) {
+        return 25;
+    }
+}
+
+contract ProposalTested is AbstractProposal {
+
+    constructor(address _arbiter) public AbstractProposal(_arbiter) {}
+
+    function getSomeValue() public pure returns(uint256) {
+        return 30;
+    }
+}
+
+interface ProposalI {
+    function getSomeValue() external pure returns(uint256);
+}
+
+contract Factory {
+    address public proposalTemplate;
+    bytes public curCode;
+    address public newContract;
+    mapping(uint256=>Proposal) _abs;
+    
+    function registerTemplate(bytes memory _props) public {
+        curCode = _props;
+    }
+    
+    function deployCode() public returns (address) {
+        uint256 asmReturnValue;
+        address addr;
+        bytes memory _curCode = curCode;
+        assembly {
+            addr:= create(0,add(_curCode,0x20), sload(1))
+            asmReturnValue := gt(extcodesize(addr),0)
+        }
+        require(asmReturnValue > 0);
+        newContract = addr;
+        AbstractProposal(addr).setupProposal(msg.sender);
+        return newContract;
+    }
+    
+    function callM() public view returns (uint256){
+        Proposal c = Proposal(newContract);
+        return c.getSomeValue();
+    }
+    
+    //function getCode() public pure returns(bytes memory) {
+    //    return type(Proposal).creationCode;
+    //}
+}
+
+
+
+
+
+
+pragma solidity >=0.4.22 <0.6.0;
+interface CI {
+    function lolEncoding(bytes calldata lol) external view returns(bytes memory);
+    function lolDecoding(bytes calldata lol) external view returns(bytes memory);
+}
+contract C is CI{
+    function lolEncoding(bytes memory _code) public view returns (bytes memory) {
+        return abi.encodePacked(_code, msg.sender);
+    }
+}
+
+
+
+
+
+
+
+pragma solidity >=0.4.22 <0.6.0;
+
+
+contract AbstractProposal {
+    address private factory; // private?
+    address public arbiter;
+    
+    constructor() internal {
+        factory = msg.sender;
+    }
+
+    function setupProposal(address _arbiter) public;
+    function getSomeValue() public pure returns(uint256);
+}
+
+
+contract Proposal is AbstractProposal {
+
+    constructor() public AbstractProposal() {}
+
+    function setupProposal(address _arbiter) public {
+        arbiter = _arbiter;
+    }
+    
+    function getSomeValue() public pure returns(uint256) {
+        return 100;
+    }
+}
