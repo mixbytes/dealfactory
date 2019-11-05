@@ -17,6 +17,8 @@ contract('ProposalFactory test', async accounts => {
     const ARBITER = accounts[5];
 
     let proposalFactory;
+    let proposalMainBytecode = fs.readFileSync("test/proposal_main_bytecode", 'utf8').trim();
+    let proposalTestBytecode = fs.readFileSync("test/proposal_test_bytecode", 'utf8').trim();
     let newlyCreatedProposalContract;
     let newlyCreatedProposalAddress;
 
@@ -30,11 +32,9 @@ contract('ProposalFactory test', async accounts => {
     });
 
     it('register proposal bytecode', async() => {
-        let proposal_bytecode = fs.readFileSync("test/proposal_bytecode", 'utf8').trim()
-
-        await proposalFactory.registerProposalTemplate(proposal_bytecode)
+        await proposalFactory.registerProposalTemplate(proposalMainBytecode)
         let proposalCode = await proposalFactory.currentProposalBytecode.call();
-        assert.equal(proposal_bytecode, proposalCode)
+        assert.equal(proposalMainBytecode, proposalCode)
     });
 
     it('create proposal by CUSTOMER_1', async() => {
@@ -45,7 +45,7 @@ contract('ProposalFactory test', async accounts => {
         });
     });
 
-    it('setup newly createdProposalContract', async() => {
+    it('setup newly created proposal contract', async() => {
         // setup and check
         newlyCreatedProposalContract = await ProposalContract.at(newlyCreatedProposalAddress);
         let factoryAddressInProposal = await newlyCreatedProposalContract.factory.call()
@@ -54,5 +54,30 @@ contract('ProposalFactory test', async accounts => {
         assert.equal(arbiterAddressInProposal, ARBITER);
         let proposalOwner = await newlyCreatedProposalContract.owner();
         assert.equal(proposalOwner, CUSTOMER_1);
+    });
+
+    it('changing bytecode to tested_bytecode', async() => {
+        await proposalFactory.registerProposalTemplate(proposalTestBytecode)
+        let proposalCode = await proposalFactory.currentProposalBytecode.call();
+        assert.equal(proposalTestBytecode, proposalCode)
+    });
+
+    it('create proposal by CUSTOMER_2', async() => {
+        let proposalCreationTx = await proposalFactory.createConfiguredProposal({from: CUSTOMER_2});
+        newlyCreatedProposalAddress = proposalCreationTx.logs[proposalCreationTx.logs.length - 1].args.proposalAddress; // too explicit, especially index, use promise
+        truffleAssert.eventEmitted(proposalCreationTx, 'ProposalCreated', (res) => {
+            return res.proposalAddress == newlyCreatedProposalAddress;
+        });
+    });
+
+    it('setup newly created proposal contract', async() => {
+        // setup and check
+        newlyCreatedProposalContract = await ProposalContract.at(newlyCreatedProposalAddress);
+        let factoryAddressInProposal = await newlyCreatedProposalContract.factory.call()
+        let arbiterAddressInProposal = await newlyCreatedProposalContract.arbiter.call()
+        assert.equal(factoryAddressInProposal, proposalFactory.address);
+        assert.equal(arbiterAddressInProposal, ARBITER);
+        let proposalOwner = await newlyCreatedProposalContract.owner();
+        assert.equal(proposalOwner, ARBITER); // hehe tricky
     });
 })

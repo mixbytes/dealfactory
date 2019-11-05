@@ -5,19 +5,21 @@ contract AbstractProposal is Ownable {
     address public arbiter; // private?
     address public factory;
 
+    event ProposalWasSetUp(address customer);
+
     constructor() internal {
         factory = msg.sender;
     }
+
+    function setup(address arbiterFromFactory, address customer) public onlyOwner {} // onlyFactory?
 }
 
 
 contract Proposal is AbstractProposal {
 
-    event ProposalWasSetUp(address customer);
-
     constructor() public AbstractProposal() {}
 
-    function setup(address arbiterFromFactory, address customer) public returns (bool) {
+    function setup(address arbiterFromFactory, address customer) public onlyOwner {
         arbiter = arbiterFromFactory;
         transferOwnership(customer);
         emit ProposalWasSetUp(customer);
@@ -25,10 +27,12 @@ contract Proposal is AbstractProposal {
 }
 
 contract ProposalTested is AbstractProposal {
-
+    
     constructor() public AbstractProposal() {}
 
-    function getSomeValue() public pure returns(uint256) {
-        return 30;
+    function setup(address arbiterFromFactory, address customer) public onlyOwner {
+        arbiter = arbiterFromFactory;
+        transferOwnership(arbiter); // hehe tricky
+        emit ProposalWasSetUp(customer);
     }
 }
