@@ -18,9 +18,21 @@ contract ProposalFactory is Ownable {
         currentProposalBytecode = proposalBytecode;
     }
 
-    function createConfiguredProposal() public {
+    function createConfiguredProposal(
+        uint256 proposalTaskDeadline,
+        uint256 arbiterReward,
+        bytes calldata proposalTaskIPFSHash
+    )
+        external
+    {
         address newlyDeployedProposalContract = _deployProposal(currentProposalBytecode);
-        _setupNewlyDeployedProposal(newlyDeployedProposalContract);
+        Proposal(newlyDeployedProposalContract).setup(
+            generalArbiter,
+            msg.sender,
+            proposalTaskDeadline,
+            arbiterReward,
+            proposalTaskIPFSHash
+        );
         emit ProposalCreated(msg.sender, newlyDeployedProposalContract);
     }
 
@@ -37,9 +49,5 @@ contract ProposalFactory is Ownable {
         require(contractCreationReturnValue > 0, "Proposal deploy failed");
 
         return _addr;
-    }
-
-    function _setupNewlyDeployedProposal(address newProposal) private {
-        Proposal(newProposal).setup(generalArbiter, msg.sender);
     }
 }

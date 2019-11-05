@@ -6,7 +6,6 @@ const ProposalContract = artifacts.require("Proposal");
 const ProposalTest = artifacts.require("ProposalTested");
 
 
-
 contract('ProposalFactory test', async accounts => {
 
     const FACTORY_OWNER = accounts[0];
@@ -45,8 +44,7 @@ contract('ProposalFactory test', async accounts => {
         });
     });
 
-    it('setup newly created proposal contract', async() => {
-        // setup and check
+    it('check setup of newly created proposal contract', async() => {
         newlyCreatedProposalContract = await ProposalContract.at(newlyCreatedProposalAddress);
         let factoryAddressInProposal = await newlyCreatedProposalContract.factory.call()
         let arbiterAddressInProposal = await newlyCreatedProposalContract.arbiter.call()
@@ -70,7 +68,7 @@ contract('ProposalFactory test', async accounts => {
         });
     });
 
-    it('setup newly created proposal contract', async() => {
+    it('check setup of newly created proposal contract', async() => {
         // setup and check
         newlyCreatedProposalContract = await ProposalContract.at(newlyCreatedProposalAddress);
         let factoryAddressInProposal = await newlyCreatedProposalContract.factory.call()
@@ -81,3 +79,6 @@ contract('ProposalFactory test', async accounts => {
         assert.equal(proposalOwner, ARBITER); // hehe tricky
     });
 })
+
+
+//code version : https://github.com/mixbytes/renderhash/tree/0e86749c671dd0ac248c22395ed007fcc98d4bd5
