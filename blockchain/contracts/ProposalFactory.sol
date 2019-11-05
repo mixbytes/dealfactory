@@ -6,7 +6,6 @@ import "./Proposal.sol";
 contract ProposalFactory is Ownable {
     address public generalArbiter;
     bytes public currentProposalBytecode;
-    address public temporary;
 
     event ProposalCreated(address customer, address proposalAddress);
 
