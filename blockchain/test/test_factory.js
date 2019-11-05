@@ -3,7 +3,7 @@ const fs = require('fs');
 const truffleAssert = require('truffle-assertions');
 const ProposalFactory = artifacts.require("ProposalFactory");
 const ProposalContract = artifacts.require("Proposal");
-const ProposalTest = artifacts.require("ProposalTested");
+const ProposalMock = artifacts.require("ProposalMock");
 
 
 contract('ProposalFactory test', async accounts => {
@@ -17,7 +17,7 @@ contract('ProposalFactory test', async accounts => {
 
     let proposalFactory;
     let proposalMainBytecode = fs.readFileSync("test/proposal_main_bytecode", 'utf8').trim();
-    let proposalTestBytecode = fs.readFileSync("test/proposal_test_bytecode", 'utf8').trim();
+    let mockProposalBytecode = fs.readFileSync("test/proposal_test_bytecode", 'utf8').trim();
     let newlyCreatedProposalContract;
     let newlyCreatedProposalAddress;
 
@@ -55,9 +55,9 @@ contract('ProposalFactory test', async accounts => {
     });
 
     it('changing bytecode to tested_bytecode', async() => {
-        await proposalFactory.registerProposalTemplate(proposalTestBytecode)
+        await proposalFactory.registerProposalTemplate(mockProposalBytecode)
         let proposalCode = await proposalFactory.currentProposalBytecode.call();
-        assert.equal(proposalTestBytecode, proposalCode)
+        assert.equal(mockProposalBytecode, proposalCode)
     });
 
     it('create proposal by CUSTOMER_2', async() => {

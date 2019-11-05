@@ -3,10 +3,10 @@ const fs = require('fs');
 const truffleAssert = require('truffle-assertions');
 const ProposalFactory = artifacts.require("ProposalFactory");
 const ProposalContract = artifacts.require("Proposal");
-const ProposalTest = artifacts.require("ProposalTested");
+const ProposalMock = artifacts.require("ProposalMock");
 
 
-contract('ProposalFactory test', async accounts => {
+contract('Proposal test', async accounts => {
 
     const FACTORY_OWNER = accounts[0];
     const CUSTOMER_1 = accounts[1];
@@ -110,4 +110,6 @@ contract('ProposalFactory test', async accounts => {
         let proposalOwner = await newlyCreatedProposalContract.owner();
         assert.equal(proposalOwner, CUSTOMER_1);
     });
+
+    it('')
 })

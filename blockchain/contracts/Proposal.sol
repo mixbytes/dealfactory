@@ -1,6 +1,7 @@
 pragma solidity 0.5.12;
 
 import "../node_modules/openzeppelin-solidity/contracts/ownership/Ownable.sol";
+
 contract AbstractProposal is Ownable {
 
     modifier onlyFactory {
@@ -8,17 +9,25 @@ contract AbstractProposal is Ownable {
         _;
     }
 
+    modifier onlyParties {
+        require(msg.sender == owner() || (msg.sender == contractor && contractor != address(0)));
+        _;
+    }
+
     enum States {ZS, INIT, PROPOSED, PREPAID, COMPLETED, DISPUTE, RESOLVED, CLOSED}
 
     address public arbiter; // private?
     address public factory;
+    address public contractor;
     States currentState;
 
     event ProposalWasSetUp(address customer);
+    event ProposalStateChangedToBy(States state, address who);
 
     constructor() internal {
         factory = msg.sender;
     }
+
 
     function setup(
         address arbiterFromFactory,
@@ -33,6 +42,13 @@ contract AbstractProposal is Ownable {
         internalSetup(arbiterFromFactory, customer, deadline, arbiterReward, taskIpfsHash);
     }
 
+    function pushStateForwardTo(States nextState) external onlyParties {
+        changeStateTo(nextState);
+
+        emit ProposalStateChangedToBy(nextState, msg.sender);
+    }
+
+    function changeStateTo(States nextState) internal;
     function internalSetup(
         address arbiterFromFactory,
         address customer,
@@ -73,18 +89,6 @@ contract Proposal is AbstractProposal {
 
         transferOwnership(customer);
 
-        emit ProposalWasSetUp(customer);
-    }
-}
-
-contract ProposalTested is AbstractProposal {
-    //code version : https://github.com/mixbytes/renderhash/tree/0e86749c671dd0ac248c22395ed007fcc98d4bd5
-
-    constructor() public AbstractProposal() {}
-
-    function setup(address arbiterFromFactory, address customer) public onlyOwner {
-        arbiter = arbiterFromFactory;
-        transferOwnership(arbiter); // hehe tricky
         emit ProposalWasSetUp(customer);
     }
 }
