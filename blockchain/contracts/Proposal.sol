@@ -3,28 +3,30 @@ pragma solidity 0.5.12;
 import "../node_modules/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 contract AbstractProposal is Ownable {
     address public arbiter; // private?
+    address public factory;
 
-    constructor(address _arbiter, address proposalOwner) internal {
-        arbiter = _arbiter;
-        transferOwnership(proposalOwner);
+    constructor() internal {
+        factory = msg.sender;
     }
-
-    function getSomeValue() public pure returns(uint256);
 }
 
 
 contract Proposal is AbstractProposal {
 
-    constructor(address proposalOwner, address _arbiter) public AbstractProposal(proposalOwner, _arbiter) {}
+    event ProposalWasSetUp(address customer);
 
-    function getSomeValue() public pure returns(uint256) {
-        return 25;
+    constructor() public AbstractProposal() {}
+
+    function setup(address arbiterFromFactory, address customer) public returns (bool) {
+        arbiter = arbiterFromFactory;
+        transferOwnership(customer);
+        emit ProposalWasSetUp(customer);
     }
 }
 
 contract ProposalTested is AbstractProposal {
 
-    constructor(address proposalOwner, address _arbiter) public AbstractProposal(proposalOwner, _arbiter) {}
+    constructor() public AbstractProposal() {}
 
     function getSomeValue() public pure returns(uint256) {
         return 30;

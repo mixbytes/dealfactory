@@ -5,6 +5,8 @@ import "./Proposal.sol";
 
 contract ProposalFactory is Ownable {
     address public generalArbiter;
+    bytes public currentProposalBytecode;
+    address public temporary;
 
     event ProposalCreated(address customer, address proposalAddress);
 
@@ -12,11 +14,32 @@ contract ProposalFactory is Ownable {
         generalArbiter = arbiter;
     }
 
-    function createProposal() public {
-        Proposal newProposal = new Proposal(msg.sender, generalArbiter);
-        emit ProposalCreated(msg.sender, address(newProposal));
+    function registerProposalTemplate(bytes memory proposalBytecode) public onlyOwner {
+        currentProposalBytecode = proposalBytecode;
     }
 
-    //register ProposalAbstraction - попробуй сделать обновляемость
-    // через использование абстракции/интерфейса пропосала, но не конкретной реализации
+    function createConfiguredProposal() public {
+        address newlyDeployedProposalContract = _deployProposal(currentProposalBytecode);
+        _setupNewlyDeployedProposal(newlyDeployedProposalContract);
+        emit ProposalCreated(msg.sender, newlyDeployedProposalContract);
+    }
+
+    function _deployProposal(bytes memory proposalBytecode)
+        private
+        returns (address)
+    {
+        uint256 contractCreationReturnValue;
+        address _addr;
+        assembly {
+            _addr := create(0, add(proposalBytecode,0x20), sload(2))
+            contractCreationReturnValue := gt(extcodesize(_addr), 0)
+        }
+        require(contractCreationReturnValue > 0, "Proposal deploy failed");
+
+        return _addr;
+    }
+
+    function _setupNewlyDeployedProposal(address newProposal) private {
+        Proposal(newProposal).setup(generalArbiter, msg.sender);
+    }
 }
