@@ -111,5 +111,10 @@ contract('Proposal test', async accounts => {
         assert.equal(proposalCustomer, CUSTOMER_1);
     });
 
-    it('')
+    /*
+    контракт находится в состоянии INIT. Тестируй переход в Cancel и далее, в состояние PROPOSED
+    далее логика proposed и логика перехода состояний из него
+    далее логика prepaid и перехода состояний из него.
+    */
+
 })
