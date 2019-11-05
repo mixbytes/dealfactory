@@ -42,7 +42,7 @@ contract ProposalFactory is Ownable {
         uint256 contractCreationReturnValue;
         address _addr;
         assembly {
-            _addr := create(0, add(proposalBytecode,0x20), sload(2)) // не забудь вернуться!
+            _addr := create(0, add(proposalBytecode,0x20), mload(proposalBytecode)) // не забудь вернуться!
             contractCreationReturnValue := gt(extcodesize(_addr), 0)
         }
         require(contractCreationReturnValue > 0, "Proposal deploy failed");

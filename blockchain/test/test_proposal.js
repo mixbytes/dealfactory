@@ -107,8 +107,8 @@ contract('Proposal test', async accounts => {
         let arbiterAddressInProposal = await newlyCreatedProposalContract.arbiter.call()
         assert.equal(factoryAddressInProposal, proposalFactory.address);
         assert.equal(arbiterAddressInProposal, ARBITER);
-        let proposalOwner = await newlyCreatedProposalContract.owner();
-        assert.equal(proposalOwner, CUSTOMER_1);
+        let proposalCustomer = await newlyCreatedProposalContract.customer.call();
+        assert.equal(proposalCustomer, CUSTOMER_1);
     });
 
     it('')

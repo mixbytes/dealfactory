@@ -2,15 +2,14 @@ pragma solidity 0.5.12;
 
 import "../node_modules/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
-contract AbstractProposal is Ownable {
-
-    modifier onlyFactory {
-        require(msg.sender == factory, "Function can be called only by factory");
-        _;
-    }
+contract AbstractProposal {
 
     modifier onlyParties {
-        require(msg.sender == owner() || (msg.sender == contractor && contractor != address(0)));
+        require(
+            msg.sender == customer ||
+            msg.sender == contractor ||
+            msg.sender == arbiter,
+            "Only customer, contractor or arbiter");
         _;
     }
 
@@ -19,7 +18,8 @@ contract AbstractProposal is Ownable {
     address public arbiter; // private?
     address public factory;
     address public contractor;
-    States currentState;
+    address public customer;
+    States public currentState;
 
     event ProposalWasSetUp(address customer);
     event ProposalStateChangedToBy(States state, address who);
@@ -31,15 +31,15 @@ contract AbstractProposal is Ownable {
 
     function setup(
         address arbiterFromFactory,
-        address customer,
+        address _customer,
         uint256 deadline,
         uint256 arbiterReward,
         bytes calldata taskIpfsHash
     )
         external
-        onlyFactory
     {
-        internalSetup(arbiterFromFactory, customer, deadline, arbiterReward, taskIpfsHash);
+        require(msg.sender == factory, "Function can be called only by factory");
+        internalSetup(arbiterFromFactory, _customer, deadline, arbiterReward, taskIpfsHash);
     }
 
     function pushStateForwardTo(States nextState) external onlyParties {
@@ -51,7 +51,7 @@ contract AbstractProposal is Ownable {
     function changeStateTo(States nextState) internal;
     function internalSetup(
         address arbiterFromFactory,
-        address customer,
+        address _customer,
         uint256 deadline,
         uint256 arbiterReward,
         bytes memory taskIpfsHash
@@ -70,7 +70,7 @@ contract Proposal is AbstractProposal {
 
     function internalSetup(
         address arbiterFromFactory,
-        address customer,
+        address _customer,
         uint256 deadline,
         uint256 arbiterReward,
         bytes memory taskIpfsHash
@@ -86,9 +86,13 @@ contract Proposal is AbstractProposal {
         arbiterDaiReward = arbiterReward;
         customerTaskDeadline = deadline;
         customerTaskIPFSHash = taskIpfsHash;
-
-        transferOwnership(customer);
+        customer = _customer;
 
         emit ProposalWasSetUp(customer);
+    }
+
+    function changeStateTo(States nextState) internal {
+        // mock
+        nextState;
     }
 }
