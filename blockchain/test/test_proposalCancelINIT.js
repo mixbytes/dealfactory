@@ -7,7 +7,7 @@ const ProposalContract = artifacts.require("Proposal");
 const ProposalMock = artifacts.require("ProposalMock");
 
 
-contract('Proposal test base', async accounts => {
+contract('Proposal test with cancellation on init', async accounts => {
 
     const STATES = {
         ZS: 0,
@@ -125,27 +125,28 @@ contract('Proposal test base', async accounts => {
     });
 
     /*
-    состояние PROPOSED
+    контракт находится в состоянии INIT. Тестируй переход в Cancel и далее, в состояние PROPOSED
     далее логика proposed и логика перехода состояний из него
     далее логика prepaid и перехода состояний из него.
     */
 
-    it('going to proposed state', async() => {
-        // wrong access
+    it('cancelling from INIT state', async() => {
+        // invalid access
         await expectThrow(
-            newlyCreatedProposalContract.responseToProposal(1000000000000, 100, {from: CONTRACTOR_2})
+            newlyCreatedProposalContract.closeProposal({from: FACTORY_OWNER})
         )
-        let reward = 100;
-        let currentDeadline = await newlyCreatedProposalContract.customerTaskDeadline.call();
-        console.log(currentDeadline)
-        await newlyCreatedProposalContract.responseToProposal(currentDeadline - 100, reward, {from: CONTRACTOR_1})
 
-        // check state invariants
-        let newDeadline = await newlyCreatedProposalContract.customerTaskDeadline.call();
-        console.log(newDeadline.toNumber())
-        let contractorReward = await newlyCreatedProposalContract.contractorDaiReward.call();
-        assert.equal(newDeadline + 100, currentDeadline);
-        assert.equal(contractorReward, reward);
-    })
-
-});
+        // invalid, deadline was not met
+        await expectThrow(
+            newlyCreatedProposalContract.closeProposal({from: CUSTOMER_1})
+        )
+        
+        // increasing time
+        await time.advanceBlock();
+        let start = await time.latest();
+        let end = start.add(time.duration.years(2));
+        await time.increaseTo(end);
+        
+        await newlyCreatedProposalContract.closeProposal({from: CUSTOMER_1});
+    });
+})
