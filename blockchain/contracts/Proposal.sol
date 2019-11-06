@@ -92,7 +92,13 @@ contract Proposal is AbstractProposal {
     }
 
     function changeStateTo(States nextState) internal {
-        // mock
-        nextState;
+        if (nextState == States.CLOSED) {
+            closeProposal();
+        }
+    }
+
+    function closeProposal() internal {
+        require(customerTaskDeadline < now, "invalid conditions for proposal cancellation");
+        selfdestruct(msg.sender); // tmp
     }
 }

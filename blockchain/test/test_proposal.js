@@ -1,12 +1,24 @@
 const fs = require('fs');
 
 const truffleAssert = require('truffle-assertions');
+const { time } = require('openzeppelin-test-helpers');
 const ProposalFactory = artifacts.require("ProposalFactory");
 const ProposalContract = artifacts.require("Proposal");
 const ProposalMock = artifacts.require("ProposalMock");
 
 
 contract('Proposal test', async accounts => {
+
+    const STATES = {
+        ZS: 0,
+        INIT: 1,
+        PROPOSED: 2,
+        PREPAID: 3,
+        COMPLETED: 4,
+        DISPUTE: 5,
+        RESOLVED: 6,
+        CLOSED: 7
+    }
 
     const FACTORY_OWNER = accounts[0];
     const CUSTOMER_1 = accounts[1];
@@ -36,6 +48,17 @@ contract('Proposal test', async accounts => {
         assert.fail('Expected throw not received');
     };
 
+    async function expectNoContract(promise) {
+        const patternString = "is not a contract address";
+      try { await promise; } catch (error) {
+            console.log(error)
+            error.message.should.contain(patternString);
+            return;
+      }
+        assert.fail(null, null, 'promise expected to fail with error containing "' + patternString + '", but it does not');
+    };
+
+    
     before('deploying factory', async() => {
         proposalFactory = await ProposalFactory.new(ARBITER, {from: FACTORY_OWNER});
     })
@@ -69,6 +92,7 @@ contract('Proposal test', async accounts => {
             proposalFactory.createConfiguredProposal(proposalDeadline, 0, IPFSMock, {from: CUSTOMER_1})
         );
     });
+    
 
     it('create proposal by CUSTOMER_1', async() => {
         let blocknumber = await web3.eth.getBlockNumber();
@@ -116,5 +140,30 @@ contract('Proposal test', async accounts => {
     далее логика proposed и логика перехода состояний из него
     далее логика prepaid и перехода состояний из него.
     */
+
+    it('cancelling from INIT state', async() => {
+        // invalid access
+        await expectThrow(
+            newlyCreatedProposalContract.pushStateForwardTo(STATES.CLOSED, {from: FACTORY_OWNER})
+        )
+
+        // invalid, contractor not stated
+        await expectThrow(
+            newlyCreatedProposalContract.pushStateForwardTo(STATES.CLOSED, {from: CONTRACTOR_1})
+        )
+
+        // invalid, deadline was not met
+        await expectThrow(
+            newlyCreatedProposalContract.pushStateForwardTo(STATES.CLOSED, {from: CUSTOMER_1})
+        )
+        
+        // increasing time
+        await time.advanceBlock();
+        let start = await time.latest();
+        let end = start.add(time.duration.years(2));
+        await time.increaseTo(end);
+        
+        await newlyCreatedProposalContract.pushStateForwardTo(STATES.CLOSED, {from: CUSTOMER_1});
+    });
 
 })
