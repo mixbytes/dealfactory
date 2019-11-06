@@ -20,7 +20,8 @@ contract ProposalFactory is Ownable {
     function createConfiguredProposal(
         uint256 proposalTaskDeadline,
         uint256 arbiterReward,
-        bytes calldata proposalTaskIPFSHash
+        bytes calldata proposalTaskIPFSHash,
+        address contractor
     )
         external
     {
@@ -30,7 +31,8 @@ contract ProposalFactory is Ownable {
             msg.sender,
             proposalTaskDeadline,
             arbiterReward,
-            proposalTaskIPFSHash
+            proposalTaskIPFSHash,
+            contractor
         );
         emit ProposalCreated(msg.sender, newlyDeployedProposalContract);
     }

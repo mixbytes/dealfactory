@@ -7,8 +7,4 @@ contract ProposalMock is AbstractProposal {
 
     constructor() public AbstractProposal() {}
 
-    function setup(address arbiterFromFactory, address customer) public {
-        arbiter = arbiterFromFactory;
-        emit ProposalWasSetUp(customer);
-    }
 }

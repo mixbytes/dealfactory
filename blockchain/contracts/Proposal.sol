@@ -1,8 +1,19 @@
 pragma solidity 0.5.12;
 
-import "../node_modules/openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
-contract AbstractProposal {
+contract ProposalStateDataTransferer {
+    // states main state variables used in setup and other functions
+    // these state variables are used in state transitions
+    uint256 public customerTaskDeadline;
+    uint256 public arbiterDaiReward;
+    bytes public customerTaskIPFSHash;
+    address public arbiter;
+    address public contractor;
+    address public customer;
+}
+
+
+contract ProposalStateTransitioner is ProposalStateDataTransferer {
 
     modifier onlyParties {
         require(
@@ -15,90 +26,91 @@ contract AbstractProposal {
 
     enum States {ZS, INIT, PROPOSED, PREPAID, COMPLETED, DISPUTE, RESOLVED, CLOSED}
 
-    address public arbiter; // private?
-    address public factory;
-    address public contractor;
-    address public customer;
     States public currentState;
 
-    event ProposalWasSetUp(address customer);
     event ProposalStateChangedToBy(States state, address who);
+    //function responseToProposal(uint256 contractorDeadline, uint256 contractorReward) external;
+    //function pushToPrepaidState() external;
+    //function announceTaskCompleted() external;
+    //function startDispute() external;
+    //function resolveDispute() external;
+    function closeProposal() external onlyParties {
+        require(customerTaskDeadline < now, "Cancellation deadline condition is not met");
+        changeStateTo(States.CLOSED);
+    }
+
+    function changeStateTo(States nextState) internal;
+}
+
+
+contract AbstractProposal {
+
+    address public factory;
+
+    event ProposalWasSetUp(address customer);
 
     constructor() internal {
         factory = msg.sender;
     }
 
-
     function setup(
-        address arbiterFromFactory,
+        address _arbiter,
         address _customer,
         uint256 deadline,
         uint256 arbiterReward,
-        bytes calldata taskIpfsHash
+        bytes calldata taskIpfsHash,
+        address _contractor
     )
         external
     {
         require(msg.sender == factory, "Function can be called only by factory");
-        internalSetup(arbiterFromFactory, _customer, deadline, arbiterReward, taskIpfsHash);
+        internalSetup(_arbiter, _customer, deadline, arbiterReward, taskIpfsHash, _contractor);
     }
 
-    function pushStateForwardTo(States nextState) external onlyParties {
-        changeStateTo(nextState);
-
-        emit ProposalStateChangedToBy(nextState, msg.sender);
-    }
-
-    function changeStateTo(States nextState) internal;
     function internalSetup(
-        address arbiterFromFactory,
+        address _arbiter,
         address _customer,
         uint256 deadline,
         uint256 arbiterReward,
-        bytes memory taskIpfsHash
+        bytes memory taskIpfsHash,
+        address _contractor
     )
         internal;
 }
 
 
-contract Proposal is AbstractProposal {
-
-    uint256 public customerTaskDeadline;
-    uint256 public arbiterDaiReward;
-    bytes public customerTaskIPFSHash;
+contract Proposal is AbstractProposal, ProposalStateTransitioner {
 
     constructor() public AbstractProposal() {}
 
     function internalSetup(
-        address arbiterFromFactory,
+        address _arbiter,
         address _customer,
         uint256 deadline,
         uint256 arbiterReward,
-        bytes memory taskIpfsHash
+        bytes memory taskIpfsHash,
+        address _contractor
     )
         internal
     {
         require(deadline > now, "Deadline can not be less or equal to now");
         require(arbiterReward > 0, "Arbiter award should be more than zero");
 
-        arbiter = arbiterFromFactory;
+        arbiter = _arbiter;
         currentState = States.INIT;
 
         arbiterDaiReward = arbiterReward;
         customerTaskDeadline = deadline;
         customerTaskIPFSHash = taskIpfsHash;
         customer = _customer;
+        contractor = _contractor;
 
         emit ProposalWasSetUp(customer);
     }
 
     function changeStateTo(States nextState) internal {
         if (nextState == States.CLOSED) {
-            closeProposal();
+            selfdestruct(msg.sender);
         }
-    }
-
-    function closeProposal() internal {
-        require(customerTaskDeadline < now, "invalid conditions for proposal cancellation");
-        selfdestruct(msg.sender); // tmp
     }
 }

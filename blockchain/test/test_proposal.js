@@ -7,7 +7,7 @@ const ProposalContract = artifacts.require("Proposal");
 const ProposalMock = artifacts.require("ProposalMock");
 
 
-contract('Proposal test', async accounts => {
+contract('Proposal test base', async accounts => {
 
     const STATES = {
         ZS: 0,
@@ -47,17 +47,6 @@ contract('Proposal test', async accounts => {
         }
         assert.fail('Expected throw not received');
     };
-
-    async function expectNoContract(promise) {
-        const patternString = "is not a contract address";
-      try { await promise; } catch (error) {
-            console.log(error)
-            error.message.should.contain(patternString);
-            return;
-      }
-        assert.fail(null, null, 'promise expected to fail with error containing "' + patternString + '", but it does not');
-    };
-
     
     before('deploying factory', async() => {
         proposalFactory = await ProposalFactory.new(ARBITER, {from: FACTORY_OWNER});
@@ -84,12 +73,12 @@ contract('Proposal test', async accounts => {
 
         // wrong deadline
         await expectThrow(
-            proposalFactory.createConfiguredProposal(block.timestamp, daiReward, IPFSMock, {from: CUSTOMER_1})
+            proposalFactory.createConfiguredProposal(block.timestamp, daiReward, IPFSMock, CONTRACTOR_1, {from: CUSTOMER_1})
         );
         
         // wrong arbiter reward amount
         await expectThrow(
-            proposalFactory.createConfiguredProposal(proposalDeadline, 0, IPFSMock, {from: CUSTOMER_1})
+            proposalFactory.createConfiguredProposal(proposalDeadline, 0, IPFSMock, CONTRACTOR_1, {from: CUSTOMER_1})
         );
     });
     
@@ -102,7 +91,7 @@ contract('Proposal test', async accounts => {
         let daiReward = 10;
         let IPFSMock = "0x66012a0a"
 
-        let proposalCreationTx = await proposalFactory.createConfiguredProposal(proposalDeadline, daiReward,  IPFSMock, {from: CUSTOMER_1});
+        let proposalCreationTx = await proposalFactory.createConfiguredProposal(proposalDeadline, daiReward,  IPFSMock, CONTRACTOR_1, {from: CUSTOMER_1});
         newlyCreatedProposalAddress = proposalCreationTx.logs[proposalCreationTx.logs.length - 1].args.proposalAddress; // too explicit, especially index, use promise
         truffleAssert.eventEmitted(proposalCreationTx, 'ProposalCreated', (res) => {
             return res.proposalAddress == newlyCreatedProposalAddress;
@@ -121,7 +110,7 @@ contract('Proposal test', async accounts => {
 
         // only by factory
         await expectThrow(
-            newlyCreatedProposalContract.setup(ARBITER, CUSTOMER_2, proposalDeadline, daiReward, IPFSMock, {from: CUSTOMER_2})
+            newlyCreatedProposalContract.setup(ARBITER, CUSTOMER_2, proposalDeadline, daiReward, IPFSMock, CONTRACTOR_1, {from: CUSTOMER_2})
         )
     })
 
@@ -141,29 +130,7 @@ contract('Proposal test', async accounts => {
     далее логика prepaid и перехода состояний из него.
     */
 
-    it('cancelling from INIT state', async() => {
-        // invalid access
-        await expectThrow(
-            newlyCreatedProposalContract.pushStateForwardTo(STATES.CLOSED, {from: FACTORY_OWNER})
-        )
+    it('going to proposed state', async() => {
 
-        // invalid, contractor not stated
-        await expectThrow(
-            newlyCreatedProposalContract.pushStateForwardTo(STATES.CLOSED, {from: CONTRACTOR_1})
-        )
-
-        // invalid, deadline was not met
-        await expectThrow(
-            newlyCreatedProposalContract.pushStateForwardTo(STATES.CLOSED, {from: CUSTOMER_1})
-        )
-        
-        // increasing time
-        await time.advanceBlock();
-        let start = await time.latest();
-        let end = start.add(time.duration.years(2));
-        await time.increaseTo(end);
-        
-        await newlyCreatedProposalContract.pushStateForwardTo(STATES.CLOSED, {from: CUSTOMER_1});
-    });
-
-})
+    })
+});
