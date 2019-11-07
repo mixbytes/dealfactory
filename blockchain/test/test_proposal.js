@@ -195,6 +195,31 @@ contract('Proposal test base', async accounts => {
         // check state
         let curState = await newlyCreatedProposalContract.currentState.call();
         assert.equal(curState, STATES.PROPOSED);
+    });
+
+    // some off-chain actions happened, customer and contractor agreed on a new price
+    // time? - он же будетм меньше или равен нового таймстэмпа
+
+    it('agree on a new price, state is PROPOSED', async() => {
+        let currrentDeadline = await newlyCreatedProposalContract.taskDeadline.call()
+        let newReward = 100;
+
+        // ha-ha
+        await expectThrow(
+            newlyCreatedProposalContract.responseToProposal(currrentDeadline, 0, {from: CUSTOMER_1})
+        )
+
+        
+        await newlyCreatedProposalContract.responseToProposal(currrentDeadline, newReward, {from: CONTRACTOR_1})
+        
+        // check state
+        let curState = await newlyCreatedProposalContract.currentState.call();
+        assert.equal(curState, STATES.PROPOSED);
+        
+        //check new reward
+        let contractorReward = await newlyCreatedProposalContract.contractorDaiReward.call();
+        assert.equal(contractorReward, newReward);
+        
     })
 
 });

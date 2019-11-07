@@ -43,7 +43,9 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
         deadlineNotOver
     {
         require(msg.sender == contractor, "Wrong access");
-        require(currentState == States.INIT, "This state can be reached only from INIT state");
+        require(
+            currentState == States.INIT || currentState == States.PROPOSED,
+            "This state can be reached only from INIT state");
         require(
             contractorDeadline <= taskDeadline,
             "Your deadline should be less or equal to current deadline"
@@ -151,7 +153,9 @@ contract Proposal is ProposalSetupper {
             taskDeadline = newDeadline;
             contractorDaiReward = contractorReward;
 
-            currentState = States.PROPOSED;
+            if (currentState == States.INIT) {
+                currentState = States.PROPOSED;
+            }
         }
     }
 }
