@@ -83,7 +83,9 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
     function closeProposal() external onlyParties {
         require(
             currentState == States.INIT || currentState == States.PROPOSED ||
-            (currentState == States.PREPAID && now <= _revertDeadline && msg.sender == customer),
+            currentState == States.PREPAID && (
+                (now <= _revertDeadline && msg.sender == customer) || taskDeadline < now
+            ),
             "Proposal cancellation conditions are not met"
         );
         changeStateTo(States.CLOSED, 0, 0);
