@@ -64,34 +64,20 @@ contract('Proposal test with cancellation on init', async accounts => {
     });
 
     it('create proposal - test of failings', async() => {
-        let blocknumber = await web3.eth.getBlockNumber();
-        let block = await web3.eth.getBlock(blocknumber);
-        let proposalDeadline = block.timestamp + 10000;
-
-        let daiReward = 10;
         let IPFSMock = "0x66012a0a"
 
-        // wrong deadline
-        await expectThrow(
-            proposalFactory.createConfiguredProposal(block.timestamp, daiReward, IPFSMock, CONTRACTOR_1, {from: CUSTOMER_1})
-        );
-        
         // wrong arbiter reward amount
         await expectThrow(
-            proposalFactory.createConfiguredProposal(proposalDeadline, 0, IPFSMock, CONTRACTOR_1, {from: CUSTOMER_1})
+            proposalFactory.createConfiguredProposal(0, IPFSMock, CONTRACTOR_1, {from: CUSTOMER_1})
         );
     });
     
 
     it('create proposal by CUSTOMER_1', async() => {
-        let blocknumber = await web3.eth.getBlockNumber();
-        let block = await web3.eth.getBlock(blocknumber);
-        let proposalDeadline = block.timestamp + 10000;
-
         let daiReward = 10;
         let IPFSMock = "0x66012a0a"
 
-        let proposalCreationTx = await proposalFactory.createConfiguredProposal(proposalDeadline, daiReward,  IPFSMock, CONTRACTOR_1, {from: CUSTOMER_1});
+        let proposalCreationTx = await proposalFactory.createConfiguredProposal(daiReward,  IPFSMock, CONTRACTOR_1, {from: CUSTOMER_1});
         newlyCreatedProposalAddress = proposalCreationTx.logs[proposalCreationTx.logs.length - 1].args.proposalAddress; // too explicit, especially index, use promise
         truffleAssert.eventEmitted(proposalCreationTx, 'ProposalCreated', (res) => {
             return res.proposalAddress == newlyCreatedProposalAddress;
@@ -99,10 +85,6 @@ contract('Proposal test with cancellation on init', async accounts => {
     });
 
     it('trying to call setup using wrong access', async() => {
-        let blocknumber = await web3.eth.getBlockNumber();
-        let block = await web3.eth.getBlock(blocknumber);
-        let proposalDeadline = block.timestamp + 10000;
-
         let daiReward = 10;
         let IPFSMock = "0x66012a0a";
 
@@ -110,18 +92,14 @@ contract('Proposal test with cancellation on init', async accounts => {
 
         // only by factory
         await expectThrow(
-            newlyCreatedProposalContract.setup(ARBITER, CUSTOMER_2, proposalDeadline, daiReward, IPFSMock, CONTRACTOR_1, {from: CUSTOMER_2})
+            newlyCreatedProposalContract.setup(ARBITER, CUSTOMER_2, daiReward, IPFSMock, CONTRACTOR_1, {from: CUSTOMER_2})
         )
     })
 
-    it('check setup params of newly created proposal contract', async() => {
-        
-        let factoryAddressInProposal = await newlyCreatedProposalContract.factory.call()
-        let arbiterAddressInProposal = await newlyCreatedProposalContract.arbiter.call()
-        assert.equal(factoryAddressInProposal, proposalFactory.address);
-        assert.equal(arbiterAddressInProposal, ARBITER);
-        let proposalCustomer = await newlyCreatedProposalContract.customer.call();
-        assert.equal(proposalCustomer, CUSTOMER_1);
+    it('check proposal has INIT state', async() => {
+        // check creation state
+        let curState = await newlyCreatedProposalContract.currentState.call();
+        assert.equal(curState, STATES.INIT);
     });
 
     it('cancelling from INIT state', async() => {
@@ -129,18 +107,6 @@ contract('Proposal test with cancellation on init', async accounts => {
         await expectThrow(
             newlyCreatedProposalContract.closeProposal({from: FACTORY_OWNER})
         )
-
-        // invalid, deadline was not met
-        await expectThrow(
-            newlyCreatedProposalContract.closeProposal({from: CUSTOMER_1})
-        )
-        
-        // increasing time
-        await time.advanceBlock();
-        let start = await time.latest();
-        let end = start.add(time.duration.years(2));
-        await time.increaseTo(end);
-        
         await newlyCreatedProposalContract.closeProposal({from: CUSTOMER_1});
     });
 })

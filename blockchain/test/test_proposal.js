@@ -93,34 +93,20 @@ contract('Proposal test base', async accounts => {
     });
 
     it('should throw - create proposal with wrong params', async() => {
-        let blocknumber = await web3.eth.getBlockNumber();
-        let block = await web3.eth.getBlock(blocknumber);
-        let proposalDeadline = block.timestamp + 10000;
-
-        let daiReward = 10;
         let IPFSMock = "0x66012a0a"
-
-        // wrong deadline
-        await expectThrow(
-            proposalFactory.createConfiguredProposal(block.timestamp, daiReward, IPFSMock, CONTRACTOR_1, {from: CUSTOMER_1})
-        );
-        
+       
         // wrong arbiter reward amount
         await expectThrow(
-            proposalFactory.createConfiguredProposal(proposalDeadline, 0, IPFSMock, CONTRACTOR_1, {from: CUSTOMER_1})
+            proposalFactory.createConfiguredProposal(0, IPFSMock, CONTRACTOR_1, {from: CUSTOMER_1})
         );
     });
     
 
     it('create proposal by CUSTOMER_1', async() => {
-        let blocknumber = await web3.eth.getBlockNumber();
-        let block = await web3.eth.getBlock(blocknumber);
-        let proposalDeadline = block.timestamp + 10000;
-
         let daiReward = 10;
         let IPFSMock = "0x66012a0a"
 
-        let proposalCreationTx = await proposalFactory.createConfiguredProposal(proposalDeadline, daiReward,  IPFSMock, CONTRACTOR_1, {from: CUSTOMER_1});
+        let proposalCreationTx = await proposalFactory.createConfiguredProposal(daiReward,  IPFSMock, CONTRACTOR_1, {from: CUSTOMER_1});
         newlyCreatedProposalAddress = proposalCreationTx.logs[proposalCreationTx.logs.length - 1].args.proposalAddress; // too explicit, especially index, use promise
         truffleAssert.eventEmitted(proposalCreationTx, 'ProposalCreated', (res) => {
             return res.proposalAddress == newlyCreatedProposalAddress;
@@ -139,7 +125,7 @@ contract('Proposal test base', async accounts => {
 
         // only by factory
         await expectThrow(
-            newlyCreatedProposalContract.setup(ARBITER, CUSTOMER_2, proposalDeadline, daiReward, IPFSMock, CONTRACTOR_1, {from: CUSTOMER_2})
+            newlyCreatedProposalContract.setup(ARBITER, CUSTOMER_2, daiReward, IPFSMock, CONTRACTOR_1, {from: CUSTOMER_2})
         )
     })
 
@@ -156,41 +142,31 @@ contract('Proposal test base', async accounts => {
 
     it('throw on transition from INIT to PROPOSED state', async() => {
         // data needed to revert time back
-        let currentSnapshot = await takeSnapshot();
-        snapshotId = currentSnapshot['result'];
+        //let currentSnapshot = await takeSnapshot();
+        //snapshotId = currentSnapshot['result'];
 
         // wrong access
         await expectThrow(
-            newlyCreatedProposalContract.responseToProposal(1000000000000, 100, {from: CONTRACTOR_2})
+            newlyCreatedProposalContract.responseToProposal(1000000000000000, 100, {from: CONTRACTOR_2})
         )
 
         // deadline conditional is met
-        await time.advanceBlock();
-        let start = await time.latest();
-        let end = start.add(time.duration.years(2));
-        await time.increaseTo(end);
-
-        let reward = 100;
-        let currentDeadline = await newlyCreatedProposalContract.taskDeadline.call();
         await expectThrow(
-            newlyCreatedProposalContract.responseToProposal(currentDeadline - 100, reward, {from: CONTRACTOR_1})
+            newlyCreatedProposalContract.responseToProposal(0, 100, {from: CONTRACTOR_1})
         )
     })
 
     it('should go forward to proposed state', async() => {
         // reverting back time
-        await revertToSnapShot(snapshotId);
+        // await revertToSnapShot(snapshotId);
+
+        let blocknumber = await web3.eth.getBlockNumber();
+        let block = await web3.eth.getBlock(blocknumber);
+        let proposalDeadline = block.timestamp + 100000;
 
         let reward = 100;
-        let currentDeadline = await newlyCreatedProposalContract.taskDeadline.call();
-        await newlyCreatedProposalContract.responseToProposal(currentDeadline - 100, reward, {from: CONTRACTOR_1})
 
-        
-        // check state invariants
-        let newDeadline = await newlyCreatedProposalContract.taskDeadline.call();
-        let contractorReward = await newlyCreatedProposalContract.contractorDaiReward.call();
-        assert.equal(newDeadline.toNumber() + 100, currentDeadline.toNumber());
-        assert.equal(contractorReward, reward);
+        await newlyCreatedProposalContract.responseToProposal(proposalDeadline, reward, {from: CONTRACTOR_1})
 
         // check state
         let curState = await newlyCreatedProposalContract.currentState.call();
@@ -198,20 +174,18 @@ contract('Proposal test base', async accounts => {
     });
 
     // some off-chain actions happened, customer and contractor agreed on a new price
-    // time? - он же будетм меньше или равен нового таймстэмпа
-    // состояние, когда есть TTL, который постоянно меньше или равен заданному в фабрике.
 
     it('agree on a new price, state is PROPOSED', async() => {
-        let currrentDeadline = await newlyCreatedProposalContract.taskDeadline.call()
+        let prevDeadline = await newlyCreatedProposalContract.taskDeadline.call()
         let newReward = 100;
 
         // ha-ha
         await expectThrow(
-            newlyCreatedProposalContract.responseToProposal(currrentDeadline, 0, {from: CUSTOMER_1})
+            newlyCreatedProposalContract.responseToProposal(prevDeadline, 0, {from: CUSTOMER_1})
         )
 
         
-        await newlyCreatedProposalContract.responseToProposal(currrentDeadline, newReward, {from: CONTRACTOR_1})
+        await newlyCreatedProposalContract.responseToProposal(prevDeadline.toNumber() + 1, newReward, {from: CONTRACTOR_1})
         
         // check state
         let curState = await newlyCreatedProposalContract.currentState.call();
@@ -220,6 +194,10 @@ contract('Proposal test base', async accounts => {
         //check new reward
         let contractorReward = await newlyCreatedProposalContract.contractorDaiReward.call();
         assert.equal(contractorReward, newReward);
+
+        // check new deadline
+        let newDeadline = await newlyCreatedProposalContract.taskDeadline.call();
+        assert.equal(newDeadline.toNumber() - 1, prevDeadline.toNumber())
         
     })
 

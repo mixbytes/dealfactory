@@ -18,7 +18,6 @@ contract ProposalFactory is Ownable {
     }
 
     function createConfiguredProposal(
-        uint256 proposalTaskDeadline,
         uint256 arbiterReward,
         bytes calldata proposalTaskIPFSHash,
         address contractor
@@ -29,7 +28,6 @@ contract ProposalFactory is Ownable {
         Proposal(newlyDeployedProposalContract).setup(
             generalArbiter,
             msg.sender,
-            proposalTaskDeadline,
             arbiterReward,
             proposalTaskIPFSHash,
             contractor

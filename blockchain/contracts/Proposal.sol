@@ -40,16 +40,12 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
 
     function responseToProposal(uint256 contractorDeadline, uint256 contractorReward)
         external
-        deadlineNotOver
     {
         require(msg.sender == contractor, "Wrong access");
         require(
             currentState == States.INIT || currentState == States.PROPOSED,
             "This action can be called only from INIT or PROPOSED state");
-        require(
-            contractorDeadline <= taskDeadline,
-            "Your deadline should be less or equal to current deadline"
-        );
+        require(contractorDeadline > now, "Your deadline should be gt now");
         changeStateTo(States.PROPOSED, contractorDeadline, contractorReward);
     }
 
@@ -59,7 +55,10 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
     //function resolveDispute() external;
 
     function closeProposal() external onlyParties {
-        require(taskDeadline < now, "Cancellation deadline condition is not met");
+        require(
+            currentState == States.INIT || currentState == States.PROPOSED,
+            "Proposal cancellation conditions are not met"
+        );
         changeStateTo(States.CLOSED, 0, 0);
     }
 
@@ -85,7 +84,6 @@ contract ProposalSetupper is ProposalStateTransitioner{
     function setup(
         address _arbiter,
         address _customer,
-        uint256 deadline,
         uint256 arbiterReward,
         bytes calldata _taskIPFSHash,
         address _contractor
@@ -93,13 +91,12 @@ contract ProposalSetupper is ProposalStateTransitioner{
         external
     {
         require(msg.sender == factory, "Function can be called only by factory");
-        internalSetup(_arbiter, _customer, deadline, arbiterReward, _taskIPFSHash, _contractor);
+        internalSetup(_arbiter, _customer, arbiterReward, _taskIPFSHash, _contractor);
     }
 
     function internalSetup(
         address _arbiter,
         address _customer,
-        uint256 deadline,
         uint256 arbiterReward,
         bytes memory _taskIPFSHash,
         address _contractor
@@ -115,24 +112,21 @@ contract Proposal is ProposalSetupper {
     function internalSetup(
         address _arbiter,
         address _customer,
-        uint256 deadline,
         uint256 arbiterReward,
         bytes memory _taskIPFSHash,
         address _contractor
     )
         internal
     {
-        require(deadline > now, "Deadline can not be less or equal to now");
         require(arbiterReward > 0, "Arbiter award should be more than zero");
 
         arbiter = _arbiter;
-        currentState = States.INIT;
-
         arbiterDaiReward = arbiterReward;
-        taskDeadline = deadline;
-        taskIPFSHash = _taskIPFSHash;
         customer = _customer;
         contractor = _contractor;
+
+        currentState = States.INIT;
+        taskIPFSHash = _taskIPFSHash;
 
         emit ProposalWasSetUp(customer);
     }
@@ -152,10 +146,7 @@ contract Proposal is ProposalSetupper {
         if (nextState == States.PROPOSED) {
             taskDeadline = newDeadline;
             contractorDaiReward = contractorReward;
-
-            if (currentState == States.INIT) {
-                currentState = States.PROPOSED;
-            }
+            currentState = States.PROPOSED;
         }
     }
 }
