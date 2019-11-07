@@ -47,6 +47,8 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
             "This action can be called only from INIT or PROPOSED state");
         require(contractorDeadline > now, "Your deadline should be gt now");
         changeStateTo(States.PROPOSED, contractorDeadline, contractorReward);
+
+        emit ProposalStateChangedToBy(States.PROPOSED, msg.sender);
     }
 
     //function pushToPrepaidState() external;
@@ -60,6 +62,8 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
             "Proposal cancellation conditions are not met"
         );
         changeStateTo(States.CLOSED, 0, 0);
+
+        emit ProposalStateChangedToBy(States.CLOSED, msg.sender);
     }
 
     function changeStateTo(
@@ -92,6 +96,8 @@ contract ProposalSetupper is ProposalStateTransitioner{
     {
         require(msg.sender == factory, "Function can be called only by factory");
         internalSetup(_arbiter, _customer, arbiterReward, _taskIPFSHash, _contractor);
+
+        emit ProposalWasSetUp(_customer);
     }
 
     function internalSetup(
@@ -127,8 +133,6 @@ contract Proposal is ProposalSetupper {
 
         currentState = States.INIT;
         taskIPFSHash = _taskIPFSHash;
-
-        emit ProposalWasSetUp(customer);
     }
 
     function changeStateTo(
