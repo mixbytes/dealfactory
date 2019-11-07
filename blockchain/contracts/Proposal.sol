@@ -45,7 +45,7 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
         require(msg.sender == contractor, "Wrong access");
         require(
             currentState == States.INIT || currentState == States.PROPOSED,
-            "This state can be reached only from INIT state");
+            "This action can be called only from INIT or PROPOSED state");
         require(
             contractorDeadline <= taskDeadline,
             "Your deadline should be less or equal to current deadline"

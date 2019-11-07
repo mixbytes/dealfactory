@@ -199,6 +199,7 @@ contract('Proposal test base', async accounts => {
 
     // some off-chain actions happened, customer and contractor agreed on a new price
     // time? - он же будетм меньше или равен нового таймстэмпа
+    // состояние, когда есть TTL, который постоянно меньше или равен заданному в фабрике.
 
     it('agree on a new price, state is PROPOSED', async() => {
         let currrentDeadline = await newlyCreatedProposalContract.taskDeadline.call()
