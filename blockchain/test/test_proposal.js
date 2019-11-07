@@ -31,6 +31,8 @@ contract('Proposal test base', async accounts => {
     let proposalMainBytecode = fs.readFileSync("test/proposal_main_bytecode", 'utf8').trim();
     let newlyCreatedProposalContract;
     let newlyCreatedProposalAddress;
+    
+    let snapshotId;
 
     let expectThrow = async (promise) => {
         try {
@@ -47,6 +49,33 @@ contract('Proposal test base', async accounts => {
         }
         assert.fail('Expected throw not received');
     };
+
+    let takeSnapshot = () => {
+        return new Promise((resolve, reject) => {
+          web3.currentProvider.send({
+            jsonrpc: '2.0',
+            method: 'evm_snapshot',
+            id: new Date().getTime()
+          }, (err, snapshotId) => {
+            if (err) { return reject(err) }
+            return resolve(snapshotId)
+          })
+        })
+    }
+
+    let revertToSnapShot = (id) => {
+        return new Promise((resolve, reject) => {
+          web3.currentProvider.send({
+            jsonrpc: '2.0',
+            method: 'evm_revert',
+            params: [id],
+            id: new Date().getTime()
+          }, (err, result) => {
+            if (err) { return reject(err) }
+            return resolve(result)
+          })
+        })
+    }
     
     before('deploying factory', async() => {
         proposalFactory = await ProposalFactory.new(ARBITER, {from: FACTORY_OWNER});
@@ -63,7 +92,7 @@ contract('Proposal test base', async accounts => {
         assert.equal(proposalMainBytecode, proposalCode)
     });
 
-    it('create proposal - test of failings', async() => {
+    it('should throw - create proposal with wrong params', async() => {
         let blocknumber = await web3.eth.getBlockNumber();
         let block = await web3.eth.getBlock(blocknumber);
         let proposalDeadline = block.timestamp + 10000;
@@ -114,38 +143,58 @@ contract('Proposal test base', async accounts => {
         )
     })
 
-    it('check setup params of newly created proposal contract', async() => {
-        
-        let factoryAddressInProposal = await newlyCreatedProposalContract.factory.call()
-        let arbiterAddressInProposal = await newlyCreatedProposalContract.arbiter.call()
-        assert.equal(factoryAddressInProposal, proposalFactory.address);
-        assert.equal(arbiterAddressInProposal, ARBITER);
-        let proposalCustomer = await newlyCreatedProposalContract.customer.call();
-        assert.equal(proposalCustomer, CUSTOMER_1);
+    it('check proposal has INIT state', async() => {
+        // check creation state
+        let curState = await newlyCreatedProposalContract.currentState.call();
+        assert.equal(curState, STATES.INIT);
     });
 
     /*
-    состояние PROPOSED
-    далее логика proposed и логика перехода состояний из него
+    proposed и логика перехода состояний из него
     далее логика prepaid и перехода состояний из него.
     */
 
-    it('going to proposed state', async() => {
+    it('throw on transition from INIT to PROPOSED state', async() => {
+        // data needed to revert time back
+        let currentSnapshot = await takeSnapshot();
+        snapshotId = currentSnapshot['result'];
+
         // wrong access
         await expectThrow(
             newlyCreatedProposalContract.responseToProposal(1000000000000, 100, {from: CONTRACTOR_2})
         )
+
+        // deadline conditional is met
+        await time.advanceBlock();
+        let start = await time.latest();
+        let end = start.add(time.duration.years(2));
+        await time.increaseTo(end);
+
         let reward = 100;
-        let currentDeadline = await newlyCreatedProposalContract.customerTaskDeadline.call();
-        console.log(currentDeadline)
+        let currentDeadline = await newlyCreatedProposalContract.taskDeadline.call();
+        await expectThrow(
+            newlyCreatedProposalContract.responseToProposal(currentDeadline - 100, reward, {from: CONTRACTOR_1})
+        )
+    })
+
+    it('should go forward to proposed state', async() => {
+        // reverting back time
+        await revertToSnapShot(snapshotId);
+
+        let reward = 100;
+        let currentDeadline = await newlyCreatedProposalContract.taskDeadline.call();
         await newlyCreatedProposalContract.responseToProposal(currentDeadline - 100, reward, {from: CONTRACTOR_1})
 
+        
         // check state invariants
-        let newDeadline = await newlyCreatedProposalContract.customerTaskDeadline.call();
-        console.log(newDeadline.toNumber())
+        let newDeadline = await newlyCreatedProposalContract.taskDeadline.call();
         let contractorReward = await newlyCreatedProposalContract.contractorDaiReward.call();
-        assert.equal(newDeadline + 100, currentDeadline);
+        assert.equal(newDeadline.toNumber() + 100, currentDeadline.toNumber());
         assert.equal(contractorReward, reward);
+
+        // check state
+        let curState = await newlyCreatedProposalContract.currentState.call();
+        assert.equal(curState, STATES.PROPOSED);
     })
 
 });

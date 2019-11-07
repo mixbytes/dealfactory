@@ -8,8 +8,8 @@ contract ProposalStateDataTransferer {
     address public contractor;
     address public customer;
 
-    uint256 public customerTaskDeadline;
-    bytes public customerTaskIPFSHash;
+    uint256 public taskDeadline;
+    bytes public taskIPFSHash;
 
     uint256 public arbiterDaiReward;
     uint256 public contractorDaiReward;
@@ -28,25 +28,36 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
         _;
     }
 
-    enum States {ZS, INIT, PROPOSED, PREPAID, COMPLETED, DISPUTE, RESOLVED, CLOSED}
+    modifier deadlineNotOver {
+        require(taskDeadline >= now, "The time for this action is over");
+        _;
+    }
 
+    enum States {ZS, INIT, PROPOSED, PREPAID, COMPLETED, DISPUTE, RESOLVED, CLOSED}
     States public currentState;
 
     event ProposalStateChangedToBy(States state, address who);
-    function responseToProposal(uint256 contractorDeadline, uint256 contractorReward) external {
+
+    function responseToProposal(uint256 contractorDeadline, uint256 contractorReward)
+        external
+        deadlineNotOver
+    {
         require(msg.sender == contractor, "Wrong access");
+        require(currentState == States.INIT, "This state can be reached only from INIT state");
         require(
-            contractorDeadline <= customerTaskDeadline,
+            contractorDeadline <= taskDeadline,
             "Your deadline should be less or equal to current deadline"
         );
         changeStateTo(States.PROPOSED, contractorDeadline, contractorReward);
     }
+
     //function pushToPrepaidState() external;
     //function announceTaskCompleted() external;
     //function startDispute() external;
     //function resolveDispute() external;
+
     function closeProposal() external onlyParties {
-        require(customerTaskDeadline < now, "Cancellation deadline condition is not met");
+        require(taskDeadline < now, "Cancellation deadline condition is not met");
         changeStateTo(States.CLOSED, 0, 0);
     }
 
@@ -59,7 +70,7 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
 }
 
 
-contract AbstractProposal {
+contract ProposalSetupper is ProposalStateTransitioner{
 
     address public factory;
 
@@ -74,13 +85,13 @@ contract AbstractProposal {
         address _customer,
         uint256 deadline,
         uint256 arbiterReward,
-        bytes calldata taskIpfsHash,
+        bytes calldata _taskIPFSHash,
         address _contractor
     )
         external
     {
         require(msg.sender == factory, "Function can be called only by factory");
-        internalSetup(_arbiter, _customer, deadline, arbiterReward, taskIpfsHash, _contractor);
+        internalSetup(_arbiter, _customer, deadline, arbiterReward, _taskIPFSHash, _contractor);
     }
 
     function internalSetup(
@@ -88,23 +99,23 @@ contract AbstractProposal {
         address _customer,
         uint256 deadline,
         uint256 arbiterReward,
-        bytes memory taskIpfsHash,
+        bytes memory _taskIPFSHash,
         address _contractor
     )
         internal;
 }
 
 
-contract Proposal is AbstractProposal, ProposalStateTransitioner {
+contract Proposal is ProposalSetupper {
 
-    constructor() public AbstractProposal() {}
+    constructor() public ProposalSetupper() {}
 
     function internalSetup(
         address _arbiter,
         address _customer,
         uint256 deadline,
         uint256 arbiterReward,
-        bytes memory taskIpfsHash,
+        bytes memory _taskIPFSHash,
         address _contractor
     )
         internal
@@ -116,8 +127,8 @@ contract Proposal is AbstractProposal, ProposalStateTransitioner {
         currentState = States.INIT;
 
         arbiterDaiReward = arbiterReward;
-        customerTaskDeadline = deadline;
-        customerTaskIPFSHash = taskIpfsHash;
+        taskDeadline = deadline;
+        taskIPFSHash = _taskIPFSHash;
         customer = _customer;
         contractor = _contractor;
 
@@ -133,11 +144,14 @@ contract Proposal is AbstractProposal, ProposalStateTransitioner {
     {
         if (nextState == States.CLOSED) {
             selfdestruct(msg.sender);
+            // curState = close?
         }
 
         if (nextState == States.PROPOSED) {
-            customerTaskDeadline = newDeadline;
+            taskDeadline = newDeadline;
             contractorDaiReward = contractorReward;
+
+            currentState = States.PROPOSED;
         }
     }
 }

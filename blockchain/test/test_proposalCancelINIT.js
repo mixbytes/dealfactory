@@ -124,12 +124,6 @@ contract('Proposal test with cancellation on init', async accounts => {
         assert.equal(proposalCustomer, CUSTOMER_1);
     });
 
-    /*
-    контракт находится в состоянии INIT. Тестируй переход в Cancel и далее, в состояние PROPOSED
-    далее логика proposed и логика перехода состояний из него
-    далее логика prepaid и перехода состояний из него.
-    */
-
     it('cancelling from INIT state', async() => {
         // invalid access
         await expectThrow(
