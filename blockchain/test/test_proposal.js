@@ -132,10 +132,6 @@ contract('Proposal test base', async accounts => {
         assert.equal(curState, STATES.INIT);
     });
 
-    /*
-    далее логика prepaid и перехода состояний из него.
-    */
-
     it('throw on transition from INIT to PROPOSED state', async() => {
 
         // wrong access
@@ -221,7 +217,7 @@ contract('Proposal test base', async accounts => {
         assert.equal(customerCurBalance.toNumber(), 1000000);
     })
     
-
+    
     it('cancel from prepaid state - deadline', async() => {
         await time.advanceBlock();
         let start = await time.latest();
@@ -229,11 +225,10 @@ contract('Proposal test base', async accounts => {
         await time.increaseTo(end);
         await newlyCreatedProposalContract.closeProposal({from: CUSTOMER_1})
 
-        await newlyCreatedProposalContract.arbiterDaiReward.call();
+        let customerCurBalance = await token.balanceOf(CUSTOMER_1)
         assert.equal(customerCurBalance.toNumber(), 1000000);
     })
-    */
-
+  */
     it('should fail cancellation from PREPAID', async() => {
         // data needed to revert time back
         let currentSnapshot = await takeSnapshot();

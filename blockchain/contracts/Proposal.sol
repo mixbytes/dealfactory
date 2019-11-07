@@ -51,6 +51,7 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
     States public currentState;
 
     event ProposalStateChangedToBy(States state, address who);
+    event ProposalCloseWasCalledBy(address who);
 
     function responseToProposal(uint256 contractorDeadline, uint256 contractorReward)
         external
@@ -88,9 +89,9 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
             ),
             "Proposal cancellation conditions are not met"
         );
-        changeStateTo(States.CLOSED, 0, 0);
 
-        emit ProposalStateChangedToBy(States.CLOSED, msg.sender);
+        emit ProposalCloseWasCalledBy(msg.sender);
+        changeStateTo(States.CLOSED, 0, 0);
     }
 
     function changeStateTo(
