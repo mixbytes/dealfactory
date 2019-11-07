@@ -4,6 +4,7 @@ const truffleAssert = require('truffle-assertions');
 const { time } = require('openzeppelin-test-helpers');
 const ProposalFactory = artifacts.require("ProposalFactory");
 const ProposalContract = artifacts.require("Proposal");
+const DaiToken = artifacts.require("DaiToken");
 const ProposalMock = artifacts.require("ProposalMock");
 
 
@@ -28,6 +29,7 @@ contract('Proposal test base', async accounts => {
     const ARBITER = accounts[5];
 
     let proposalFactory;
+    let token;
     let proposalMainBytecode = fs.readFileSync("test/proposal_main_bytecode", 'utf8').trim();
     let newlyCreatedProposalContract;
     let newlyCreatedProposalAddress;
@@ -79,12 +81,10 @@ contract('Proposal test base', async accounts => {
     
     before('deploying factory', async() => {
         proposalFactory = await ProposalFactory.new(ARBITER, {from: FACTORY_OWNER});
+        token = await DaiToken.new({from: FACTORY_OWNER});
+        
+        await token.transfer(CUSTOMER_1, 1000000, {from: FACTORY_OWNER});
     })
-
-    it('check factory ownership', async() => {
-        let factoryOwnerGotByCall = await proposalFactory.owner();
-        assert.equal(factoryOwnerGotByCall, FACTORY_OWNER);
-    });
 
     it('register proposal bytecode', async() => {
         await proposalFactory.registerProposalTemplate(proposalMainBytecode)
@@ -97,7 +97,7 @@ contract('Proposal test base', async accounts => {
        
         // wrong arbiter reward amount
         await expectThrow(
-            proposalFactory.createConfiguredProposal(0, IPFSMock, CONTRACTOR_1, {from: CUSTOMER_1})
+            proposalFactory.createConfiguredProposal(0, IPFSMock, CONTRACTOR_1, token.address, {from: CUSTOMER_1})
         );
     });
     
@@ -106,7 +106,7 @@ contract('Proposal test base', async accounts => {
         let daiReward = 10;
         let IPFSMock = "0x66012a0a"
 
-        let proposalCreationTx = await proposalFactory.createConfiguredProposal(daiReward,  IPFSMock, CONTRACTOR_1, {from: CUSTOMER_1});
+        let proposalCreationTx = await proposalFactory.createConfiguredProposal(daiReward,  IPFSMock, CONTRACTOR_1, token.address, {from: CUSTOMER_1});
         newlyCreatedProposalAddress = proposalCreationTx.logs[proposalCreationTx.logs.length - 1].args.proposalAddress; // too explicit, especially index, use promise
         truffleAssert.eventEmitted(proposalCreationTx, 'ProposalCreated', (res) => {
             return res.proposalAddress == newlyCreatedProposalAddress;
@@ -114,9 +114,6 @@ contract('Proposal test base', async accounts => {
     });
 
     it('trying to call setup using wrong access', async() => {
-        let blocknumber = await web3.eth.getBlockNumber();
-        let block = await web3.eth.getBlock(blocknumber);
-        let proposalDeadline = block.timestamp + 10000;
 
         let daiReward = 10;
         let IPFSMock = "0x66012a0a";
@@ -125,7 +122,7 @@ contract('Proposal test base', async accounts => {
 
         // only by factory
         await expectThrow(
-            newlyCreatedProposalContract.setup(ARBITER, CUSTOMER_2, daiReward, IPFSMock, CONTRACTOR_1, {from: CUSTOMER_2})
+            newlyCreatedProposalContract.setup(ARBITER, CUSTOMER_2, daiReward, IPFSMock, CONTRACTOR_1, token.address, {from: CUSTOMER_2})
         )
     })
 
@@ -136,14 +133,10 @@ contract('Proposal test base', async accounts => {
     });
 
     /*
-    proposed и логика перехода состояний из него
     далее логика prepaid и перехода состояний из него.
     */
 
     it('throw on transition from INIT to PROPOSED state', async() => {
-        // data needed to revert time back
-        //let currentSnapshot = await takeSnapshot();
-        //snapshotId = currentSnapshot['result'];
 
         // wrong access
         await expectThrow(
@@ -200,5 +193,55 @@ contract('Proposal test base', async accounts => {
         assert.equal(newDeadline.toNumber() - 1, prevDeadline.toNumber())
         
     })
+
+    it('throw on transition from proposed to prepaid', async() => {
+        // invalid access
+        await expectThrow(
+            newlyCreatedProposalContract.pushToPrepaidState({from: CONTRACTOR_1})
+        )
+    })
+
+    it('should go forward to prepaid state', async() => {
+        let arbiterReward = await newlyCreatedProposalContract.arbiterDaiReward.call();
+        let contractorReward = await newlyCreatedProposalContract.contractorDaiReward.call();
+        let approveAmount = arbiterReward.toNumber() + contractorReward.toNumber();
+        await token.approve(newlyCreatedProposalAddress, approveAmount, {from: CUSTOMER_1});
+
+        await newlyCreatedProposalContract.pushToPrepaidState({from: CUSTOMER_1});
+
+        let proposalBalance = await token.balanceOf(newlyCreatedProposalAddress);
+        assert.equal(approveAmount, proposalBalance);
+    });
+
+    /*
+    it('cancel from prepaid state', async() => {
+        await newlyCreatedProposalContract.closeProposal({from: CUSTOMER_1})
+
+        let customerCurBalance = await token.balanceOf(CUSTOMER_1);
+        assert.equal(customerCurBalance.toNumber(), 1000000);
+    })
+    */
+
+    it('should fail cancellation from PREPAID', async() => {
+        // data needed to revert time back
+        let currentSnapshot = await takeSnapshot();
+        snapshotId = currentSnapshot['result'];
+
+        // deadline conditional is met
+        await time.advanceBlock();
+        let start = await time.latest();
+        let end = start.add(time.duration.hours(25));
+        await time.increaseTo(end);
+
+        await expectThrow(
+            newlyCreatedProposalContract.closeProposal({from: CUSTOMER_1})
+        )
+    })
+
+    it('<>', async() => {
+        // reverting back time
+        await revertToSnapShot(snapshotId);
+    })
+
 
 });

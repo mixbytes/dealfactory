@@ -1,6 +1,10 @@
 pragma solidity 0.5.12;
 
 
+import '../node_modules/openzeppelin-solidity/contracts/token/ERC20/IERC20.sol';
+import '../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol';
+
+
 contract ProposalStateDataTransferer {
     // states main state variables used in setup and other functions
     // these state variables are used in state transitions
@@ -8,11 +12,21 @@ contract ProposalStateDataTransferer {
     address public contractor;
     address public customer;
 
+    address public daiToken;
+
     uint256 public taskDeadline;
     bytes public taskIPFSHash;
 
     uint256 public arbiterDaiReward;
     uint256 public contractorDaiReward;
+
+    /**
+      This variable states timestamp which bounds cancellation in PREPAID state
+      and transition to DISPUTE: you can't cancel in PREPAID 24h after you locked
+      tokens in proposal, you can't dispute 24h after proposal state was moved
+      to COMPLETED.
+    */
+    uint256 _revertDeadline;
 }
 
 
@@ -41,7 +55,7 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
     function responseToProposal(uint256 contractorDeadline, uint256 contractorReward)
         external
     {
-        require(msg.sender == contractor, "Wrong access");
+        require(msg.sender == contractor, "Invalid access");
         require(
             currentState == States.INIT || currentState == States.PROPOSED,
             "This action can be called only from INIT or PROPOSED state");
@@ -51,14 +65,25 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
         emit ProposalStateChangedToBy(States.PROPOSED, msg.sender);
     }
 
-    //function pushToPrepaidState() external;
+    function pushToPrepaidState() external {
+        require(msg.sender == customer, "Invalid access");
+        require(
+            currentState == States.PROPOSED,
+            "This action can be called only from PROPOSED state"
+        );
+        changeStateTo(States.PREPAID, 0, 0);
+
+        emit ProposalStateChangedToBy(States.PREPAID, msg.sender);
+    }
+
     //function announceTaskCompleted() external;
     //function startDispute() external;
     //function resolveDispute() external;
 
     function closeProposal() external onlyParties {
         require(
-            currentState == States.INIT || currentState == States.PROPOSED,
+            currentState == States.INIT || currentState == States.PROPOSED ||
+            (currentState == States.PREPAID && now <= _revertDeadline && msg.sender == customer),
             "Proposal cancellation conditions are not met"
         );
         changeStateTo(States.CLOSED, 0, 0);
@@ -90,12 +115,13 @@ contract ProposalSetupper is ProposalStateTransitioner{
         address _customer,
         uint256 arbiterReward,
         bytes calldata _taskIPFSHash,
-        address _contractor
+        address _contractor,
+        address token
     )
         external
     {
         require(msg.sender == factory, "Function can be called only by factory");
-        internalSetup(_arbiter, _customer, arbiterReward, _taskIPFSHash, _contractor);
+        internalSetup(_arbiter, _customer, arbiterReward, _taskIPFSHash, _contractor, token);
 
         emit ProposalWasSetUp(_customer);
     }
@@ -105,13 +131,15 @@ contract ProposalSetupper is ProposalStateTransitioner{
         address _customer,
         uint256 arbiterReward,
         bytes memory _taskIPFSHash,
-        address _contractor
+        address _contractor,
+        address token
     )
         internal;
 }
 
 
 contract Proposal is ProposalSetupper {
+    using SafeMath for uint256;
 
     constructor() public ProposalSetupper() {}
 
@@ -120,7 +148,8 @@ contract Proposal is ProposalSetupper {
         address _customer,
         uint256 arbiterReward,
         bytes memory _taskIPFSHash,
-        address _contractor
+        address _contractor,
+        address token
     )
         internal
     {
@@ -130,6 +159,8 @@ contract Proposal is ProposalSetupper {
         arbiterDaiReward = arbiterReward;
         customer = _customer;
         contractor = _contractor;
+
+        daiToken = token;
 
         currentState = States.INIT;
         taskIPFSHash = _taskIPFSHash;
@@ -143,6 +174,13 @@ contract Proposal is ProposalSetupper {
         internal
     {
         if (nextState == States.CLOSED) {
+            if (currentState == States.PREPAID) {
+                uint256 transferingAmount = arbiterDaiReward.add(contractorDaiReward);
+                require(
+                    IERC20(daiToken).transfer(msg.sender, transferingAmount),
+                    "Token transfer in cancellation state failed"
+                );
+            }
             selfdestruct(msg.sender);
             // curState = close?
         }
@@ -151,6 +189,17 @@ contract Proposal is ProposalSetupper {
             taskDeadline = newDeadline;
             contractorDaiReward = contractorReward;
             currentState = States.PROPOSED;
+        }
+
+        if (nextState == States.PREPAID) {
+            uint256 transferingAmount = arbiterDaiReward.add(contractorDaiReward);
+            require(
+                IERC20(daiToken).transferFrom(msg.sender, address(this), transferingAmount),
+                "Contractors and arbiters token reward lock on proposal contract failed"
+            );
+
+            _revertDeadline = now + 24 hours;
+            currentState = States.PREPAID;
         }
     }
 }
