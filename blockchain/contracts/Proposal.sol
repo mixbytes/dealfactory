@@ -16,6 +16,7 @@ contract ProposalStateDataTransferer {
 
     uint256 public taskDeadline;
     bytes public taskIPFSHash;
+    bytes public doneTaskIPFSHash;
 
     uint256 public arbiterDaiReward;
     uint256 public contractorDaiReward;
@@ -41,11 +42,12 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
             "Only customer, contractor or arbiter");
         _;
     }
-
+/*
     modifier deadlineNotOver {
         require(taskDeadline >= now, "The time for this action is over");
         _;
     }
+*/
 
     enum States {ZS, INIT, PROPOSED, PREPAID, COMPLETED, DISPUTE, RESOLVED, CLOSED}
     States public currentState;
@@ -59,9 +61,10 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
         require(msg.sender == contractor, "Invalid access");
         require(
             currentState == States.INIT || currentState == States.PROPOSED,
-            "This action can be called only from INIT or PROPOSED state");
+            "This action can be called only from INIT or PROPOSED state"
+        );
         require(contractorDeadline > now, "Your deadline should be gt now");
-        changeStateTo(States.PROPOSED, contractorDeadline, contractorReward);
+        changeStateTo(States.PROPOSED, contractorDeadline, contractorReward, "");
 
         emit ProposalStateChangedToBy(States.PROPOSED, msg.sender);
     }
@@ -72,12 +75,27 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
             currentState == States.PROPOSED,
             "This action can be called only from PROPOSED state"
         );
-        changeStateTo(States.PREPAID, 0, 0);
+        changeStateTo(States.PREPAID, 0, 0, "");
 
         emit ProposalStateChangedToBy(States.PREPAID, msg.sender);
     }
 
-    //function announceTaskCompleted() external;
+    function announceTaskCompleted(bytes calldata doneTaskHash) external {
+        require(msg.sender == contractor, "Invalid access");
+        require(
+            currentState == States.PREPAID,
+            "This action can be called only from PROPOSED state"
+        );
+        require(
+            _revertDeadline < now,
+            "Wait until 24h customer  cancellation period from the moment of payment get expired"
+        );
+        require(taskDeadline >= now, "The time for this action is over");
+        changeStateTo(States.COMPLETED, 0, 0, doneTaskHash);
+
+        emit ProposalStateChangedToBy(States.COMPLETED, msg.sender);
+    }
+
     //function startDispute() external;
     //function resolveDispute() external;
 
@@ -85,19 +103,20 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
         require(
             currentState == States.INIT || currentState == States.PROPOSED ||
             currentState == States.PREPAID && (
-                (now <= _revertDeadline && msg.sender == customer) || taskDeadline < now
+                (_revertDeadline >= now && msg.sender == customer) || taskDeadline < now
             ),
             "Proposal cancellation conditions are not met"
         );
 
         emit ProposalCloseWasCalledBy(msg.sender);
-        changeStateTo(States.CLOSED, 0, 0);
+        changeStateTo(States.CLOSED, 0, 0, "");
     }
 
     function changeStateTo(
         States nextState,
         uint256 newDeadline,
-        uint256 contractorReward
+        uint256 contractorReward,
+        bytes memory doneTaskHash
     )
         internal;
 }
@@ -172,7 +191,8 @@ contract Proposal is ProposalSetupper {
     function changeStateTo(
         States nextState,
         uint256 newDeadline,
-        uint256 contractorReward
+        uint256 contractorReward,
+        bytes memory doneTaskHash
     )
         internal
     {
@@ -203,6 +223,13 @@ contract Proposal is ProposalSetupper {
 
             _revertDeadline = now + 24 hours;
             currentState = States.PREPAID;
+        }
+
+        if (nextState == States.COMPLETED) {
+            doneTaskIPFSHash = doneTaskHash;
+
+            _revertDeadline = now + 24 hours;
+            currentState = States.COMPLETED;
         }
     }
 }

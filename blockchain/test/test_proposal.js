@@ -245,9 +245,50 @@ contract('Proposal test base', async accounts => {
         )
     })
 
-    it('<>', async() => {
+    // todo - test completed state with _revertDeadline
+    it('should fail transition to completed', async() => {
         // reverting back time
         await revertToSnapShot(snapshotId);
+
+        let mockHash = "0x634ab";
+
+        // cancellation period for customer hasn't expired
+        await expectThrow(
+            newlyCreatedProposalContract.announceTaskCompleted(mockHash, {from: CONTRACTOR_1})
+        )
+
+        // increasing time
+        await time.advanceBlock();
+        let start = await time.latest();
+        let end = start.add(time.duration.hours(25));
+        await time.increaseTo(end);
+
+        // wrong acccess
+        await expectThrow(
+            newlyCreatedProposalContract.announceTaskCompleted(mockHash, {from: CONTRACTOR_2})
+        )
+
+        // Task Deadline revert test - data needed to revert time back
+        let currentSnapshot = await takeSnapshot();
+        snapshotId = currentSnapshot['result'];
+
+        await time.advanceBlock();
+        start = await time.latest();
+        end = start.add(time.duration.years(2));
+        await time.increaseTo(end);
+
+        // out of deadline
+        await expectThrow(
+            newlyCreatedProposalContract.announceTaskCompleted(mockHash, {from: CONTRACTOR_1})
+        )
+    })
+
+    it('transition from prepaid to completed', async() => {
+        // reverting back time
+        await revertToSnapShot(snapshotId);
+
+        let mockHash = "0x634ab";
+        await newlyCreatedProposalContract.announceTaskCompleted(mockHash, {from: CONTRACTOR_1});
     })
 
 
