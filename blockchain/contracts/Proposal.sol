@@ -20,6 +20,7 @@ contract ProposalStateDataTransferer {
 
     uint256 public arbiterDaiReward;
     uint256 public contractorDaiReward;
+    uint256 public disputedDaiReward;
 
     /**
       This variable states timestamp which bounds cancellation in PREPAID state
@@ -58,7 +59,7 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
             "This action can be called only from INIT or PROPOSED state"
         );
         require(contractorDeadline > now, "Your deadline should be gt now");
-        changeStateTo(States.PROPOSED, contractorDeadline, contractorReward, "");
+        changeStateTo(States.PROPOSED, contractorDeadline, contractorReward, "", 0);
 
         emit ProposalStateChangedToBy(States.PROPOSED, msg.sender);
     }
@@ -69,7 +70,7 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
             currentState == States.PROPOSED,
             "This action can be called only from PROPOSED state"
         );
-        changeStateTo(States.PREPAID, 0, 0, "");
+        changeStateTo(States.PREPAID, 0, 0, "", 0);
 
         emit ProposalStateChangedToBy(States.PREPAID, msg.sender);
     }
@@ -86,12 +87,25 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
         );
         require(taskDeadline >= now, "The time for this action is over");
         require(doneTaskHash.length != 0, "Invalid form of IPFS hash");
-        changeStateTo(States.COMPLETED, 0, 0, doneTaskHash);
+        changeStateTo(States.COMPLETED, 0, 0, doneTaskHash, 0);
 
         emit ProposalStateChangedToBy(States.COMPLETED, msg.sender);
     }
 
-    //function startDispute() external;
+    function startDispute(uint256 newRewardToPay) external {
+        require(msg.sender == customer, "Invalid access");
+        require(
+            currentState == States.COMPLETED,
+            "This action can be called only from COMPLETED state"
+        );
+        require(
+            _revertDeadline >= now,
+            "More than 24h past from contractors solution publication"
+        );
+        changeStateTo(States.DISPUTE, 0, 0, "", newRewardToPay);
+
+        emit ProposalStateChangedToBy(States.DISPUTE, msg.sender);
+    }
     //function resolveDispute() external;
 
     function closeProposal() external onlyParties {
@@ -105,14 +119,15 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
         );
 
         emit ProposalCloseWasCalledBy(msg.sender);
-        changeStateTo(States.CLOSED, 0, 0, "");
+        changeStateTo(States.CLOSED, 0, 0, "", 0);
     }
 
     function changeStateTo(
         States nextState,
         uint256 newDeadline,
         uint256 contractorReward,
-        bytes memory doneTaskHash
+        bytes memory doneTaskHash,
+        uint256 disputedRewardAmount
     )
         internal;
 }
@@ -188,7 +203,8 @@ contract Proposal is ProposalSetupper {
         States nextState,
         uint256 newDeadline,
         uint256 contractorReward,
-        bytes memory doneTaskHash
+        bytes memory doneTaskHash,
+        uint256 disputedRewardAmount
     )
         internal
     {
@@ -233,6 +249,13 @@ contract Proposal is ProposalSetupper {
 
             _revertDeadline = now + 24 hours;
             currentState = States.COMPLETED;
+        }
+
+        if (nextState == States.DISPUTE) {
+            disputedDaiReward = disputedRewardAmount;
+
+            _revertDeadline = now + 24 hours;
+            currentState = States.DISPUTE;
         }
     }
 }

@@ -327,4 +327,21 @@ contract('Proposal test base', async accounts => {
     })
 */
 
+    it('should fail transition from completed to dispute', async() => {
+        /*
+        только из стэйта комплитед
+        только кастомер
+        только если ревертДедлайн больше или равен нау
+        */
+
+        /*
+        внутри стэйта
+        */
+
+        /*
+        переход в closed - вышел срок revertDeadline
+        отправляет как в 219 строчке
+        */
+    })
+
 });
