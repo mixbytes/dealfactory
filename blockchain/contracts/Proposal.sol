@@ -42,12 +42,6 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
             "Only customer, contractor or arbiter");
         _;
     }
-/*
-    modifier deadlineNotOver {
-        require(taskDeadline >= now, "The time for this action is over");
-        _;
-    }
-*/
 
     enum States {ZS, INIT, PROPOSED, PREPAID, COMPLETED, DISPUTE, RESOLVED, CLOSED}
     States public currentState;
@@ -84,13 +78,14 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
         require(msg.sender == contractor, "Invalid access");
         require(
             currentState == States.PREPAID,
-            "This action can be called only from PROPOSED state"
+            "This action can be called only from PREPAID state"
         );
         require(
             _revertDeadline < now,
-            "Wait until 24h customer  cancellation period from the moment of payment get expired"
+            "Wait until 24h period from the moment of payment get expired"
         );
         require(taskDeadline >= now, "The time for this action is over");
+        require(doneTaskHash.length != 0, "Invalid form of IPFS hash");
         changeStateTo(States.COMPLETED, 0, 0, doneTaskHash);
 
         emit ProposalStateChangedToBy(States.COMPLETED, msg.sender);
@@ -104,7 +99,8 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
             currentState == States.INIT || currentState == States.PROPOSED ||
             currentState == States.PREPAID && (
                 (_revertDeadline >= now && msg.sender == customer) || taskDeadline < now
-            ),
+            ) ||
+            currentState == States.COMPLETED && now > _revertDeadline,
             "Proposal cancellation conditions are not met"
         );
 
@@ -200,7 +196,14 @@ contract Proposal is ProposalSetupper {
             if (currentState == States.PREPAID) {
                 uint256 transferingAmount = arbiterDaiReward.add(contractorDaiReward);
                 require(
-                    IERC20(daiToken).transfer(msg.sender, transferingAmount),
+                    IERC20(daiToken).transfer(customer, transferingAmount),
+                    "Token transfer in cancellation state failed"
+                );
+            }
+            if (currentState == States.COMPLETED) {
+                require(
+                    IERC20(daiToken).transfer(contractor, contractorDaiReward) &&
+                    IERC20(daiToken).transfer(customer, arbiterDaiReward),
                     "Token transfer in cancellation state failed"
                 );
             }

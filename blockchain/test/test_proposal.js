@@ -291,5 +291,40 @@ contract('Proposal test base', async accounts => {
         await newlyCreatedProposalContract.announceTaskCompleted(mockHash, {from: CONTRACTOR_1});
     })
 
+    it('should fail from completed to closed', async() => {
+        // only after 24 hours
+        let currState = await newlyCreatedProposalContract.currentState.call();
+        assert.equal(currState, STATES.COMPLETED);
+
+        await expectThrow(
+            newlyCreatedProposalContract.closeProposal({from: CONTRACTOR_1})
+        )
+
+        // increasing time
+        await time.advanceBlock();
+        let start = await time.latest();
+        let end = start.add(time.duration.hours(25));
+        await time.increaseTo(end);
+
+        // invalid access
+        await expectThrow(
+            newlyCreatedProposalContract.closeProposal({from: CONTRACTOR_2})
+        )
+    })
+/*
+    it('transition from completed to close', async() => {
+        let customerBalanceBeforeClose = await token.balanceOf(CUSTOMER_1);
+        let arbiterDaiReward = await newlyCreatedProposalContract.arbiterDaiReward.call();
+        let contractorReward = await newlyCreatedProposalContract.contractorDaiReward.call();
+        await newlyCreatedProposalContract.closeProposal({from: CONTRACTOR_1});
+
+        // check invariants
+        let balanceOfContractor = await token.balanceOf(CONTRACTOR_1);
+        assert.equal(contractorReward.toNumber(), balanceOfContractor.toNumber());
+
+        let customerBalanceAfterClose = await token.balanceOf(CUSTOMER_1);
+        assert.equal(customerBalanceAfterClose.toNumber(), customerBalanceBeforeClose.toNumber() + arbiterDaiReward.toNumber())
+    })
+*/
 
 });
