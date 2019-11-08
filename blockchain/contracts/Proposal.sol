@@ -22,6 +22,7 @@ contract ProposalStateDataTransferer {
     uint256 public contractorDaiReward;
     uint256 public disputedDaiReward;
 
+    // ДОБАВЬ ЕЩЕ ОПИСАНИЯ
     /**
       This variable states timestamp which bounds cancellation in PREPAID state
       and transition to DISPUTE: you can't cancel in PREPAID 24h after you locked
@@ -102,6 +103,7 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
             _revertDeadline >= now,
             "More than 24h past from contractors solution publication"
         );
+        require(newRewardToPay < contractorDaiReward);
         changeStateTo(States.DISPUTE, 0, 0, "", newRewardToPay);
 
         emit ProposalStateChangedToBy(States.DISPUTE, msg.sender);
@@ -113,8 +115,7 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
             currentState == States.INIT || currentState == States.PROPOSED ||
             currentState == States.PREPAID && (
                 (_revertDeadline >= now && msg.sender == customer) || taskDeadline < now
-            ) ||
-            currentState == States.COMPLETED && now > _revertDeadline,
+            ) || currentState == States.COMPLETED && now > _revertDeadline,
             "Proposal cancellation conditions are not met"
         );
 
