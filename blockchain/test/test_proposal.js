@@ -87,7 +87,7 @@ contract('Proposal test base', async accounts => {
     })
 
     it('register proposal bytecode', async() => {
-        await proposalFactory.registerProposalTemplate(proposalMainBytecode)
+        await proposalFactory.registerProposalTemplate(proposalMainBytecode, {from: FACTORY_OWNER, gas:6100000})
         let proposalCode = await proposalFactory.currentProposalBytecode.call();
         assert.equal(proposalMainBytecode, proposalCode)
     });
@@ -216,8 +216,9 @@ contract('Proposal test base', async accounts => {
         let customerCurBalance = await token.balanceOf(CUSTOMER_1);
         assert.equal(customerCurBalance.toNumber(), 1000000);
     })
+    */
     
-    
+    /*
     it('cancel from prepaid state - deadline', async() => {
         await time.advanceBlock();
         let start = await time.latest();
@@ -228,7 +229,8 @@ contract('Proposal test base', async accounts => {
         let customerCurBalance = await token.balanceOf(CUSTOMER_1)
         assert.equal(customerCurBalance.toNumber(), 1000000);
     })
-  */
+    */
+  
     it('should fail cancellation from PREPAID', async() => {
         // data needed to revert time back
         let currentSnapshot = await takeSnapshot();
@@ -332,7 +334,6 @@ contract('Proposal test base', async accounts => {
     })
     */
 
-    
     it('should fail transition from completed to dispute', async() => {
         // revert deadline conditional is not met
         await expectThrow(
@@ -356,12 +357,12 @@ contract('Proposal test base', async accounts => {
 
         let currentReward = await newlyCreatedProposalContract.contractorDaiReward.call()
         let disputedReward = currentReward.toNumber() - 100;
-        await newlyCreatedProposalContract.startDispute(disputedReward, {from: CUSTOMER_1});
+        let tx = await newlyCreatedProposalContract.startDispute(disputedReward, {from: CUSTOMER_1});
         // check invariants
         let currentState = await newlyCreatedProposalContract.currentState.call()
         assert.equal(currentState, STATES.DISPUTE);
 
-        let disputedDaiReward = await newlyCreatedProposalContract.disputedDaiReward.call();
+        let disputedDaiReward = tx.logs[0].args.newAmount;
         assert.equal(disputedDaiReward, disputedReward);
     })
 
