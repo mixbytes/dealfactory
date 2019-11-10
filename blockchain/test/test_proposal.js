@@ -398,4 +398,12 @@ contract('Proposal test base', async accounts => {
         assert.equal(customerBalanceAfterClose.toNumber(), customerBalanceBeforeClose.toNumber() + arbiterDaiReward.toNumber())
     })
     */
+
+    it('should fail transition from disputed to resolved', async() => {
+        /*
+        неправильный отправитель
+        неправильное время (сейчас выше реверт тайма, уже можно закрываться)
+        неправильный параметр награды
+        */
+    })
 });
