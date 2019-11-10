@@ -17,6 +17,7 @@ contract ProposalStateDataTransferer {
     uint256 public taskDeadline;
     bytes public taskIPFSHash;
     bytes public doneTaskIPFSHash;
+    // bytes public arbiterSolutionIPFSHash; Optional?
 
     uint256 public arbiterDaiReward;
     uint256 public contractorDaiReward;
@@ -48,8 +49,13 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
     enum States {ZS, INIT, PROPOSED, PREPAID, COMPLETED, DISPUTE, RESOLVED, CLOSED}
     States public currentState;
 
-    event ProposalStateChangedToBy(States state, address who);
-    event ProposalCloseWasCalledBy(address who);
+    // использовать, чтобы не сохранять переменные, которые можно использовать потенциально 1 раз
+    event ResponseToProposalWasReceived(uint256 deadline, uint256 reward);
+    event ProposalWasPrepaid(uint256 contractorReward, uint256 arbiterReward);
+    event ProposalTaskWasDone(uint256 when);
+    event ProposalDisputeStarted(uint256 newAmount);
+    event ProposalCloseWasCalledBy(address who, States currentState);
+    event ProposalWasResolved(bytes solutionHash);
 
     function responseToProposal(uint256 contractorDeadline, uint256 contractorReward)
         external
@@ -60,9 +66,9 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
             "This action can be called only from INIT or PROPOSED state"
         );
         require(contractorDeadline > now, "Your deadline should be gt now");
-        changeStateTo(States.PROPOSED, contractorDeadline, contractorReward, "", 0);
+        changeStateTo(States.PROPOSED, contractorDeadline, contractorReward, "", 0, false);
 
-        emit ProposalStateChangedToBy(States.PROPOSED, msg.sender);
+        emit ResponseToProposalWasReceived(contractorDeadline,contractorReward);
     }
 
     function pushToPrepaidState() external {
@@ -71,9 +77,9 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
             currentState == States.PROPOSED,
             "This action can be called only from PROPOSED state"
         );
-        changeStateTo(States.PREPAID, 0, 0, "", 0);
+        changeStateTo(States.PREPAID, 0, 0, "", 0, false);
 
-        emit ProposalStateChangedToBy(States.PREPAID, msg.sender);
+        emit ProposalWasPrepaid(contractorDaiReward, arbiterDaiReward);
     }
 
     function announceTaskCompleted(bytes calldata doneTaskHash) external {
@@ -88,9 +94,9 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
         );
         require(taskDeadline >= now, "The time for this action is over");
         require(doneTaskHash.length != 0, "Invalid form of IPFS hash");
-        changeStateTo(States.COMPLETED, 0, 0, doneTaskHash, 0);
+        changeStateTo(States.COMPLETED, 0, 0, doneTaskHash, 0, false);
 
-        emit ProposalStateChangedToBy(States.COMPLETED, msg.sender);
+        emit ProposalTaskWasDone(now);
     }
 
     function startDispute(uint256 newRewardToPay) external {
@@ -104,11 +110,27 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
             "More than 24h past from contractors solution publication"
         );
         require(newRewardToPay < contractorDaiReward, "Irrational param value");
-        changeStateTo(States.DISPUTE, 0, 0, "", newRewardToPay);
+        changeStateTo(States.DISPUTE, 0, 0, "", newRewardToPay, false);
 
-        emit ProposalStateChangedToBy(States.DISPUTE, msg.sender);
+        emit ProposalDisputeStarted(newRewardToPay);
     }
-    //function resolveDispute() external;
+
+    function resolveDispute(bool acceptCustomersDispute, bytes calldata arbiterSolution)
+        external
+    {
+        require(msg.sender == arbiter, "Invalid access");
+        require(
+            currentState == States.DISPUTE,
+            "This action can be called only from DISPUTE state"
+        );
+        require(
+            _revertDeadline >= now,
+            "More than 24h past from dispute announcement"
+        );
+        changeStateTo(States.RESOLVED, 0, 0, "", 0, acceptCustomersDispute);
+
+        emit ProposalWasResolved(arbiterSolution);
+    }
 
     function closeProposal() external onlyParties {
         require(
@@ -116,13 +138,13 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
             currentState == States.PREPAID && (
                 (_revertDeadline >= now && msg.sender == customer) || taskDeadline < now
             ) ||
-            currentState == States.COMPLETED && now > _revertDeadline ||
-            currentState == States.DISPUTE && now > _revertDeadline, // copy-paste|dosmthwiththat
+            (currentState == States.COMPLETED || currentState == States.DISPUTE ||
+            currentState == States.RESOLVED) && now >_revertDeadline,
             "Proposal cancellation conditions are not met"
         );
 
-        emit ProposalCloseWasCalledBy(msg.sender);
-        changeStateTo(States.CLOSED, 0, 0, "", 0);
+        emit ProposalCloseWasCalledBy(msg.sender, currentState);
+        changeStateTo(States.CLOSED, 0, 0, "", 0, false);
     }
 
     function changeStateTo(
@@ -130,7 +152,8 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
         uint256 newDeadline,
         uint256 contractorReward,
         bytes memory doneTaskHash,
-        uint256 disputedRewardAmount
+        uint256 disputedRewardAmount,
+        bool disputeAmountIsAccepted
     )
         internal;
 }
@@ -207,7 +230,8 @@ contract Proposal is ProposalSetupper {
         uint256 newDeadline,
         uint256 contractorReward,
         bytes memory doneTaskHash,
-        uint256 disputedRewardAmount
+        uint256 disputedRewardAmount,
+        bool disputeAmountIsAccepted
     )
         internal
     {
@@ -223,6 +247,14 @@ contract Proposal is ProposalSetupper {
                 require(
                     IERC20(daiToken).transfer(contractor, contractorDaiReward) &&
                     IERC20(daiToken).transfer(customer, arbiterDaiReward),
+                    "Token transfer in cancellation state failed"
+                );
+            }
+
+            if (currentState == States.RESOLVED) {
+                require(
+                    IERC20(daiToken).transfer(contractor, contractorDaiReward) &&
+                    IERC20(daiToken).transfer(arbiter, arbiterDaiReward),
                     "Token transfer in cancellation state failed"
                 );
             }
@@ -260,6 +292,13 @@ contract Proposal is ProposalSetupper {
 
             _revertDeadline = now + 24 hours;
             currentState = States.DISPUTE;
+        }
+
+        if (nextState == States.RESOLVED) {
+            disputedDaiReward = disputeAmountIsAccepted? disputedDaiReward : contractorDaiReward;
+
+            _revertDeadline = now + 24 hours;
+            currentState = States.RESOLVED;
         }
     }
 }
