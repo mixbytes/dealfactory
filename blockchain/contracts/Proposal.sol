@@ -103,7 +103,7 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
             _revertDeadline >= now,
             "More than 24h past from contractors solution publication"
         );
-        require(newRewardToPay < contractorDaiReward);
+        require(newRewardToPay < contractorDaiReward, "Irrational param value");
         changeStateTo(States.DISPUTE, 0, 0, "", newRewardToPay);
 
         emit ProposalStateChangedToBy(States.DISPUTE, msg.sender);
@@ -115,7 +115,9 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
             currentState == States.INIT || currentState == States.PROPOSED ||
             currentState == States.PREPAID && (
                 (_revertDeadline >= now && msg.sender == customer) || taskDeadline < now
-            ) || currentState == States.COMPLETED && now > _revertDeadline,
+            ) ||
+            currentState == States.COMPLETED && now > _revertDeadline ||
+            currentState == States.DISPUTE && now > _revertDeadline, // copy-paste|dosmthwiththat
             "Proposal cancellation conditions are not met"
         );
 
@@ -217,13 +219,14 @@ contract Proposal is ProposalSetupper {
                     "Token transfer in cancellation state failed"
                 );
             }
-            if (currentState == States.COMPLETED) {
+            if (currentState == States.COMPLETED || currentState == States.DISPUTE) {
                 require(
                     IERC20(daiToken).transfer(contractor, contractorDaiReward) &&
                     IERC20(daiToken).transfer(customer, arbiterDaiReward),
                     "Token transfer in cancellation state failed"
                 );
             }
+
             selfdestruct(msg.sender);
             // curState = close?
         }

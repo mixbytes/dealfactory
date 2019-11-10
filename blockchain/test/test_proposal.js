@@ -300,6 +300,11 @@ contract('Proposal test base', async accounts => {
             newlyCreatedProposalContract.closeProposal({from: CONTRACTOR_1})
         )
 
+        
+        // needed for further tests to revert time back
+        let currentSnapshot = await takeSnapshot();
+        snapshotId = currentSnapshot['result'];
+
         // increasing time
         await time.advanceBlock();
         let start = await time.latest();
@@ -311,7 +316,7 @@ contract('Proposal test base', async accounts => {
             newlyCreatedProposalContract.closeProposal({from: CONTRACTOR_2})
         )
     })
-/*
+    /*
     it('transition from completed to close', async() => {
         let customerBalanceBeforeClose = await token.balanceOf(CUSTOMER_1);
         let arbiterDaiReward = await newlyCreatedProposalContract.arbiterDaiReward.call();
@@ -325,23 +330,72 @@ contract('Proposal test base', async accounts => {
         let customerBalanceAfterClose = await token.balanceOf(CUSTOMER_1);
         assert.equal(customerBalanceAfterClose.toNumber(), customerBalanceBeforeClose.toNumber() + arbiterDaiReward.toNumber())
     })
-*/
+    */
 
+    
     it('should fail transition from completed to dispute', async() => {
-        /*
-        только из стэйта комплитед
-        только кастомер
-        только если ревертДедлайн больше или равен нау
-        */
+        // revert deadline conditional is not met
+        await expectThrow(
+            newlyCreatedProposalContract.startDispute(5, {from: CUSTOMER_1})
+        )
 
-        /*
-        внутри стэйта
-        */
+        // invalid access
+        await expectThrow(
+            newlyCreatedProposalContract.startDispute(5, {from: CUSTOMER_2})
+        )
 
-        /*
-        переход в closed - вышел срок revertDeadline
-        отправляет как в 219 строчке
-        */
+        // Irrational param value
+        await expectThrow(
+            newlyCreatedProposalContract.startDispute(10000, {from: CUSTOMER_1})
+        )
+    })
+    
+    it('transition from completed to dispute', async() => {
+        // reverting back time
+        await revertToSnapShot(snapshotId);
+
+        let currentReward = await newlyCreatedProposalContract.contractorDaiReward.call()
+        let disputedReward = currentReward.toNumber() - 100;
+        await newlyCreatedProposalContract.startDispute(disputedReward, {from: CUSTOMER_1});
+        // check invariants
+        let currentState = await newlyCreatedProposalContract.currentState.call()
+        assert.equal(currentState, STATES.DISPUTE);
+
+        let disputedDaiReward = await newlyCreatedProposalContract.disputedDaiReward.call();
+        assert.equal(disputedDaiReward, disputedReward);
     })
 
+    it('should fail transition from disputed to close', async() => {
+        //invalid access
+        await expectThrow(
+            newlyCreatedProposalContract.closeProposal()
+        )
+
+        //invalid deadline
+        await expectThrow(
+            newlyCreatedProposalContract.closeProposal({from: CONTRACTOR_1})
+        )
+    })
+
+    /*
+    it('transition from disputed to close', async() => {
+        await time.advanceBlock();
+        let start = await time.latest();
+        let end = start.add(time.duration.hours(25));
+        await time.increaseTo(end);
+
+        let customerBalanceBeforeClose = await token.balanceOf(CUSTOMER_1);
+        let arbiterDaiReward = await newlyCreatedProposalContract.arbiterDaiReward.call();
+        let contractorReward = await newlyCreatedProposalContract.contractorDaiReward.call();
+
+        await newlyCreatedProposalContract.closeProposal({from: CONTRACTOR_1})
+
+        // check invariants
+        let balanceOfContractor = await token.balanceOf(CONTRACTOR_1);
+        assert.equal(contractorReward.toNumber(), balanceOfContractor.toNumber());
+
+        let customerBalanceAfterClose = await token.balanceOf(CUSTOMER_1);
+        assert.equal(customerBalanceAfterClose.toNumber(), customerBalanceBeforeClose.toNumber() + arbiterDaiReward.toNumber())
+    })
+    */
 });
