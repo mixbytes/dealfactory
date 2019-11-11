@@ -283,7 +283,7 @@ contract('Proposal test with cancellation on init', async accounts => {
             proposalInstance.closeProposal({from: CONTRACTOR_1})
         )
 
-        // revert time is over
+        // revert time is over, but deadline is not
         let currentSnapshot = await takeSnapshot();
         snapshotId = currentSnapshot['result'];
 
