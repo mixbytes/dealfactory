@@ -4,6 +4,7 @@ const truffleAssert = require('truffle-assertions');
 const { time } = require('openzeppelin-test-helpers');
 const ProposalFactory = artifacts.require("ProposalFactory");
 const ProposalContract = artifacts.require("Proposal");
+const DaiToken = artifacts.require("DaiToken");
 const ProposalMock = artifacts.require("ProposalMock");
 
 
@@ -22,15 +23,14 @@ contract('Proposal test with cancellation on init', async accounts => {
 
     const FACTORY_OWNER = accounts[0];
     const CUSTOMER_1 = accounts[1];
-    const CUSTOMER_2 = accounts[2];
-    const CONTRACTOR_1 = accounts[3];
-    const CONTRACTOR_2 = accounts[4];
-    const ARBITER = accounts[5];
+    const CONTRACTOR_1 = accounts[2];
+    const ARBITER = accounts[3];
 
     let proposalFactory;
     let proposalMainBytecode = fs.readFileSync("test/proposal_main_bytecode", 'utf8').trim();
-    let newlyCreatedProposalContract;
-    let newlyCreatedProposalAddress;
+    let proposalInstance;
+    let proposalInstanceAddress;
+    let token;
 
     let expectThrow = async (promise) => {
         try {
@@ -50,6 +50,8 @@ contract('Proposal test with cancellation on init', async accounts => {
     
     before('deploying factory', async() => {
         proposalFactory = await ProposalFactory.new(ARBITER, {from: FACTORY_OWNER});
+        token = await DaiToken.new({from: FACTORY_OWNER});
+        
     })
 
     it('check factory ownership', async() => {
@@ -63,50 +65,73 @@ contract('Proposal test with cancellation on init', async accounts => {
         assert.equal(proposalMainBytecode, proposalCode)
     });
 
-    it('create proposal - test of failings', async() => {
-        let IPFSMock = "0x66012a0a"
-
+    it('should fail proposal creation', async() => {
         // wrong arbiter reward amount
         await expectThrow(
-            proposalFactory.createConfiguredProposal(0, IPFSMock, CONTRACTOR_1, {from: CUSTOMER_1})
+            proposalFactory.createConfiguredProposal(0, "0x123", CONTRACTOR_1, token.address, {from: CUSTOMER_1})
         );
+
+        // empty IPFS task hash
+        await expectThrow(
+            proposalFactory.createConfiguredProposal(10, "0x", CONTRACTOR_1, token.address, {from: CUSTOMER_1})
+        )
     });
-    
 
     it('create proposal by CUSTOMER_1', async() => {
         let daiReward = 10;
         let IPFSMock = "0x66012a0a"
 
-        let proposalCreationTx = await proposalFactory.createConfiguredProposal(daiReward,  IPFSMock, CONTRACTOR_1, {from: CUSTOMER_1});
-        newlyCreatedProposalAddress = proposalCreationTx.logs[proposalCreationTx.logs.length - 1].args.proposalAddress; // too explicit, especially index, use promise
+        let proposalCreationTx = await proposalFactory.createConfiguredProposal(daiReward,  IPFSMock, CONTRACTOR_1, token.address, {from: CUSTOMER_1});
+        proposalInstanceAddress = proposalCreationTx.logs[proposalCreationTx.logs.length - 1].args.proposalAddress; // too explicit, especially index, use promise
         truffleAssert.eventEmitted(proposalCreationTx, 'ProposalCreated', (res) => {
-            return res.proposalAddress == newlyCreatedProposalAddress;
+            return res.proposalAddress == proposalInstanceAddress;
         });
     });
 
-    it('trying to call setup using wrong access', async() => {
+    it('should fail resetup', async() => {
         let daiReward = 10;
         let IPFSMock = "0x66012a0a";
 
-        newlyCreatedProposalContract = await ProposalContract.at(newlyCreatedProposalAddress);
+        proposalInstance = await ProposalContract.at(proposalInstanceAddress);
 
         // only by factory
         await expectThrow(
-            newlyCreatedProposalContract.setup(ARBITER, CUSTOMER_2, daiReward, IPFSMock, CONTRACTOR_1, {from: CUSTOMER_2})
+            proposalInstance.setup(ARBITER, accounts[2], daiReward, IPFSMock, CONTRACTOR_1, token.address, {from: accounts[8]})
         )
     })
 
-    it('check proposal has INIT state', async() => {
+    it('stupid state check: proposal has INIT state', async() => {
         // check creation state
-        let curState = await newlyCreatedProposalContract.currentState.call();
+        let curState = await proposalInstance.currentState.call();
         assert.equal(curState, STATES.INIT);
     });
 
-    it('cancelling from INIT state', async() => {
+    it('should fail transitions to invalid states', async() => {
+        /*
+        Valid states to go to are PROPOSED or CLOSED. 
+        */
+        await expectThrow(
+           proposalInstance.announceTaskCompleted("0x123", {from: CONTRACTOR_1})
+        )
+
+        await expectThrow(
+           proposalInstance.pushToPrepaidState({from: CUSTOMER_1})
+        )
+
+        await expectThrow(
+           proposalInstance.startDispute(100, {from: CUSTOMER_1})
+        )
+
+        await expectThrow(
+            proposalInstance.resolveDispute(10, "0x123", {from: ARBITER})
+        )
+    })
+
+    it('closing proposal from INIT state', async() => {
         // invalid access
         await expectThrow(
-            newlyCreatedProposalContract.closeProposal({from: FACTORY_OWNER})
+            proposalInstance.closeProposal({from: FACTORY_OWNER})
         )
-        await newlyCreatedProposalContract.closeProposal({from: CUSTOMER_1});
+        await proposalInstance.closeProposal({from: CUSTOMER_1});
     });
 })

@@ -13,7 +13,7 @@ contract ProposalFactory is Ownable {
         generalArbiter = arbiter;
     }
 
-    function registerProposalTemplate(bytes memory proposalBytecode) public onlyOwner {
+    function registerProposalTemplate(bytes calldata proposalBytecode) external onlyOwner {
         currentProposalBytecode = proposalBytecode;
     }
 

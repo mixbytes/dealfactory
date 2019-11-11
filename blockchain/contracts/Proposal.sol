@@ -19,12 +19,16 @@ contract ProposalStateDataTransferer {
     uint256 public arbiterDaiReward;
     uint256 public contractorDaiReward;
 
-    // ДОБАВЬ ЕЩЕ ОПИСАНИЯ
     /**
-      This variable states timestamp which bounds cancellation in PREPAID state
-      and transition to DISPUTE: you can't cancel in PREPAID 24h after you locked
-      tokens in proposal, you can't dispute 24h after proposal state was moved
-      to COMPLETED.
+      This state variable is used as an internal breaker/proceeder in different states.
+      For example:
+        - PREPAID state uses this variable to establish 24h period during which proposal can be
+          cancelled by calling `closeProposal`;
+        - COMPLETED state uses this variable to state deadline after which anybody
+          can `closeProposal` with token payout for contractor;
+        - DISPUTE state uses it the same as PREPAID: 24h period within which customer can
+          start dispute on reward for task completion. Proposal can be closed in this state
+          after the period is expired.
     */
     uint256 _revertDeadline;
 }
