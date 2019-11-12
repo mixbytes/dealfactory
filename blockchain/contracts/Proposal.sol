@@ -127,7 +127,7 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
             "More than 24h past from dispute announcement"
         );
         require(
-            disputedReward > 0 && disputedReward < contractorDaiReward,
+            disputedReward > 0 && disputedReward <= contractorDaiReward,
             "Wrong value for reward"
         );
 
@@ -232,7 +232,7 @@ contract Proposal is ProposalSetupper {
     )
         internal
     {
-        if (nextState == States.CLOSED || currentState == States.RESOLVED) {
+        if (nextState == States.CLOSED || nextState == States.RESOLVED) {
             // можно сократить еще?
             if (currentState == States.PREPAID) {
                 uint256 transferingAmount = arbiterDaiReward.add(contractorDaiReward);
@@ -257,6 +257,16 @@ contract Proposal is ProposalSetupper {
                     IERC20(daiToken).transfer(arbiter, arbiterDaiReward),
                     "Token transfer in cancellation state failed"
                 );
+
+                // третья вложенность?
+                uint256 customerChange = contractorDaiReward.sub(disputedRewardAmount);
+                if (customerChange != 0) {
+                    require(
+                        IERC20(daiToken).transfer(customer, customerChange),
+                        "Customer token change transfer failed"
+                    );
+                }
+
             }
 
             selfdestruct(msg.sender);

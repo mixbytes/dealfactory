@@ -358,7 +358,7 @@ contract('Proposal test with cancellation on init', async accounts => {
             proposalInstance.resolveDispute(10, "0x123", {from: ARBITER})
         )
 
-        // здесь можно было бы делать проверки для dispute с увеличением времени как в 369,
+        // здесь можно было бы делать проверки для dispute с увеличением времени как в 373,
         // но они потом, тк это следующий стэйт
         await expectThrow(
             proposalInstance.closeProposal({from: CUSTOMER_1})
