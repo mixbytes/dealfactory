@@ -64,7 +64,8 @@ contract ProposalFactory is Ownable {
     }
 
     /**
-     * @dev Deploys contract using parametr as a creation bytecode.
+     * @dev Deploys contract using parametr as a creation bytecode. Falls if creation failed.
+     *
      * Creation logic requires using `create` inline assembly function.
      * Function `add` is used in `create` to get start position, from which creation
      * bytecode is started: first memory slot is length of `proposalBytecode` and 0x20 (32)
