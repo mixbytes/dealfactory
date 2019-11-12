@@ -4,7 +4,9 @@ pragma solidity 0.5.12;
 import '../node_modules/openzeppelin-solidity/contracts/token/ERC20/IERC20.sol';
 import '../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol';
 
-
+/**
+ * @dev Transfers main/base options of proposal.
+ */
 contract ProposalStateDataTransferer {
     // states main state variables used in setup and other functions
     // these state variables are used in state transitions
@@ -20,22 +22,24 @@ contract ProposalStateDataTransferer {
     uint256 public contractorDaiReward;
 
     /**
-      This state variable is used as an internal breaker/proceeder in different states.
-      For example:
-        - PREPAID state uses this variable to establish 24h period during which proposal can be
-          cancelled by calling `closeProposal`;
-        - COMPLETED state uses this variable to state deadline after which anybody
-          can `closeProposal` with token payout for contractor;
-        - DISPUTE state uses it the same as PREPAID: 24h period within which customer can
-          start dispute on reward for task completion. Proposal can be closed in this state
-          after the period is expired.
-    */
+     * @dev This state variable is used as an internal breaker/proceeder in different states.
+     * For example:
+     *   - PREPAID state uses this variable to establish 24h period during which proposal can be
+     *     cancelled by calling `closeProposal`;
+     *   - COMPLETED state uses this variable to state deadline after which anybody
+     *     can `closeProposal` with token payout for contractor;
+     *   - DISPUTE state uses it the same as PREPAID: 24h period within which customer can
+     *     start dispute on reward for task completion. Proposal can be closed in this state
+     *     after the period is expired.
+     */
     uint256 _revertDeadline;
 }
 
-
+/**
+ * @dev Abstract contract that incapsulates states, state transitions and
+ * requirements of these transitions. Uses state variables from {ProposalStateDataTransferer}
+ */
 contract ProposalStateTransitioner is ProposalStateDataTransferer {
-    // logic of state, its transition and conditionals
 
     modifier onlyParties {
         require(
@@ -159,7 +163,9 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
         internal;
 }
 
-
+/**
+ * @dev Abstract contract used to setup {Proposal}. Think of `setup` as of `constructor`.
+ */
 contract ProposalSetupper is ProposalStateTransitioner{
 
     address public factory;
@@ -198,6 +204,12 @@ contract ProposalSetupper is ProposalStateTransitioner{
 }
 
 
+/**
+ * @title Main Proposal contract used by Pchela computing project users.
+ * @author SabaunT (github)
+ * @dev This contract incapsulates logic of state transitions. Such design was done
+ * to ease featuring, debug, tests. All pros by differing contracts responsibilities.
+ */
 contract Proposal is ProposalSetupper {
     using SafeMath for uint256;
 
