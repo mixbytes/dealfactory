@@ -8,7 +8,7 @@ const DaiToken = artifacts.require("DaiToken");
 const ProposalMock = artifacts.require("ProposalMock");
 
 
-contract('Proposal test with cancellation on init', async accounts => {
+contract('Proposal test with cancellation on PROPOSED', async accounts => {
 
     const STATES = {
         ZS: 0,
