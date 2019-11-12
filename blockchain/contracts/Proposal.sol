@@ -1,8 +1,9 @@
 pragma solidity 0.5.12;
 
 
-import '../node_modules/openzeppelin-solidity/contracts/token/ERC20/IERC20.sol'; // tmp wipe off node_modules
-import '../node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol'; // tmp wipe off node_modules
+import 'openzeppelin-solidity/contracts/token/ERC20/IERC20.sol';
+import 'openzeppelin-solidity/contracts/math/SafeMath.sol';
+
 
 /**
  * @dev Transfers main/base options of proposal.

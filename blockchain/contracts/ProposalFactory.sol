@@ -1,6 +1,6 @@
 pragma solidity 0.5.12;
 
-import "../node_modules/openzeppelin-solidity/contracts/ownership/Ownable.sol"; // tmp wipe off node_modules
+import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 import "./Proposal.sol";
 
 contract ProposalFactory is Ownable {
@@ -44,7 +44,7 @@ contract ProposalFactory is Ownable {
         uint256 contractCreationReturnValue;
         address _addr;
         assembly {
-            _addr := create(0, add(proposalBytecode,0x20), mload(proposalBytecode)) // не забудь вернуться!
+            _addr := create(0, add(proposalBytecode,0x20), mload(proposalBytecode))
             contractCreationReturnValue := gt(extcodesize(_addr), 0)
         }
         require(contractCreationReturnValue > 0, "Proposal deploy failed");
