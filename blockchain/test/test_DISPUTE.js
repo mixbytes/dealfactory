@@ -371,7 +371,8 @@ contract('Proposal test with cancellation on init', async accounts => {
         await expectThrow(
             proposalInstance.startDispute(10, {from: CONTRACTOR_1})
         )
-
+        
+        // new reward to pay should be lt stated contractorDaiReward
         await expectThrow(
             proposalInstance.startDispute(100, {from: CUSTOMER_1})
         )

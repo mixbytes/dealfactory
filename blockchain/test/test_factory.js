@@ -3,7 +3,6 @@ const fs = require('fs');
 const truffleAssert = require('truffle-assertions');
 const ProposalFactory = artifacts.require("ProposalFactory");
 const ProposalContract = artifacts.require("Proposal");
-const ProposalMock = artifacts.require("ProposalMock");
 
 
 contract('ProposalFactory test', async accounts => {
@@ -12,7 +11,7 @@ contract('ProposalFactory test', async accounts => {
     const CUSTOMER_1 = accounts[1];
     const CUSTOMER_2 = accounts[2];
     const CONTRACTOR_1 = accounts[3];
-    const CONTRACTOR_2 = accounts[4];
+    const TOKEN_ADDRESS = accounts[4];
     const ARBITER = accounts[5];
 
     let proposalFactory;
@@ -37,7 +36,7 @@ contract('ProposalFactory test', async accounts => {
     });
 
     it('create proposal by CUSTOMER_1', async() => {
-        let proposalCreationTx = await proposalFactory.createConfiguredProposal({from: CUSTOMER_1});
+        let proposalCreationTx = await proposalFactory.createConfiguredProposal(100, "0x12", CONTRACTOR_1, TOKEN_ADDRESS, {from: CUSTOMER_1});
         newlyCreatedProposalAddress = proposalCreationTx.logs[proposalCreationTx.logs.length - 1].args.proposalAddress; // too explicit, especially index, use promise
         truffleAssert.eventEmitted(proposalCreationTx, 'ProposalCreated', (res) => {
             return res.proposalAddress == newlyCreatedProposalAddress;
@@ -46,12 +45,9 @@ contract('ProposalFactory test', async accounts => {
 
     it('check setup of newly created proposal contract', async() => {
         newlyCreatedProposalContract = await ProposalContract.at(newlyCreatedProposalAddress);
-        let factoryAddressInProposal = await newlyCreatedProposalContract.factory.call()
-        let arbiterAddressInProposal = await newlyCreatedProposalContract.arbiter.call()
-        assert.equal(factoryAddressInProposal, proposalFactory.address);
-        assert.equal(arbiterAddressInProposal, ARBITER);
-        let proposalOwner = await newlyCreatedProposalContract.owner();
-        assert.equal(proposalOwner, CUSTOMER_1);
+        let arbiterDaiRewardMainProposal = await newlyCreatedProposalContract.arbiterDaiReward.call()
+        assert.equal(arbiterDaiRewardMainProposal.toNumber(), 100);
+        
     });
 
     it('changing bytecode to tested_bytecode', async() => {
@@ -61,24 +57,16 @@ contract('ProposalFactory test', async accounts => {
     });
 
     it('create proposal by CUSTOMER_2', async() => {
-        let proposalCreationTx = await proposalFactory.createConfiguredProposal({from: CUSTOMER_2});
+        let proposalCreationTx = await proposalFactory.createConfiguredProposal(100, "0x12", CONTRACTOR_1, TOKEN_ADDRESS,{from: CUSTOMER_2});
         newlyCreatedProposalAddress = proposalCreationTx.logs[proposalCreationTx.logs.length - 1].args.proposalAddress; // too explicit, especially index, use promise
         truffleAssert.eventEmitted(proposalCreationTx, 'ProposalCreated', (res) => {
             return res.proposalAddress == newlyCreatedProposalAddress;
         });
     });
 
-    it('check setup of newly created proposal contract', async() => {
-        // setup and check
+    it('check setup of the second created proposal contract', async() => {
         newlyCreatedProposalContract = await ProposalContract.at(newlyCreatedProposalAddress);
-        let factoryAddressInProposal = await newlyCreatedProposalContract.factory.call()
-        let arbiterAddressInProposal = await newlyCreatedProposalContract.arbiter.call()
-        assert.equal(factoryAddressInProposal, proposalFactory.address);
-        assert.equal(arbiterAddressInProposal, ARBITER);
-        let proposalOwner = await newlyCreatedProposalContract.owner();
-        assert.equal(proposalOwner, ARBITER); // hehe tricky
+        let arbiterDaiRewardMainProposal = await newlyCreatedProposalContract.arbiterDaiReward.call()
+        assert.equal(arbiterDaiRewardMainProposal.toNumber(), 200); // look at ProposalMock
     });
 })
-
-
-//code version : https://github.com/mixbytes/renderhash/tree/0e86749c671dd0ac248c22395ed007fcc98d4bd5

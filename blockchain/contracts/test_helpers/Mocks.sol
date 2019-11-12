@@ -3,8 +3,38 @@ pragma solidity 0.5.12;
 import "../Proposal.sol";
 
 contract ProposalMock is ProposalSetupper {
-    //code version : https://github.com/mixbytes/renderhash/tree/0e86749c671dd0ac248c22395ed007fcc98d4bd5
 
     constructor() public ProposalSetupper() {}
 
+    function internalSetup(
+        address _arbiter,
+        address _customer,
+        uint256 arbiterReward,
+        address _contractor,
+        address token
+    )
+        internal
+    {
+        require(arbiterReward > 0, "Arbiter award should be more than zero");
+
+        arbiter = _arbiter;
+        arbiterDaiReward = arbiterReward + 100;
+        customer = _customer;
+        contractor = _contractor;
+
+        daiToken = token;
+
+        currentState = States.INIT;
+    }
+
+    function changeStateTo(
+        States nextState,
+        uint256 newDeadline,
+        uint256 contractorReward,
+        uint256 disputedRewardAmount
+    )
+        internal
+    {
+        currentState = nextState;
+    }
 }
