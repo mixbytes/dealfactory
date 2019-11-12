@@ -1,6 +1,6 @@
 pragma solidity 0.5.12;
 
-import "../node_modules/openzeppelin-solidity/contracts/ownership/Ownable.sol";
+import "../node_modules/openzeppelin-solidity/contracts/ownership/Ownable.sol"; // tmp wipe off node_modules
 import "./Proposal.sol";
 
 contract ProposalFactory is Ownable {
