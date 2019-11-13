@@ -3,7 +3,7 @@ pragma solidity 0.5.12;
 import '../../node_modules/openzeppelin-solidity/contracts/token/ERC20/ERC20Mintable.sol';
 
 /**
-* This is a test ERC20, used only for testing.
+ * This is a test ERC20, used only for testing.
  */
 contract DaiToken is ERC20Mintable {
 
