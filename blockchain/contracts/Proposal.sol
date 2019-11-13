@@ -9,8 +9,6 @@ import 'openzeppelin-solidity/contracts/math/SafeMath.sol';
  * @dev Transfers main/base options of proposal.
  */
 contract ProposalStateDataTransferer {
-    // states main state variables used in setup and other functions
-    // these state variables are used in state transitions
     address public arbiter;
     address public contractor;
     address public customer;
@@ -37,7 +35,7 @@ contract ProposalStateDataTransferer {
 
 /**
  * @dev Abstract contract that incapsulates states, state transitions and
- * requirements of these transitions. Uses state variables from {ProposalStateDataTransferer}
+ * requirements of these transitions. Uses state variables from `ProposalStateDataTransferer`
  */
 contract ProposalStateTransitioner is ProposalStateDataTransferer {
 
@@ -61,9 +59,9 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
     event ProposalCloseWasCalledBy(address who, States currentState);
 
     /**
-     * @notice The function is called by {contractor} to push state forward to PROPOSED and define
-     * proposal base configurations like: deadline, reward for work. PROPOSED requires setting
-     * results of negotiations between {customer} and {contractor}.
+     * @notice The function is called by `contractor` to push state forward to `PROPOSED` and define
+     * proposal base configurations like: deadline, reward for work. `PROPOSED` requires setting
+     * results of negotiations between `customer` and `contractor`.
      * @dev The function can be called from two STATES - `INIT` and `PROPOSED`.
      * @param contractorDeadline task deadline, after which reward payouts are unavailable
      * @param contractorReward reward amount which contractor gets if task was done within
@@ -84,20 +82,20 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
     }
 
     /**
-     * @notice The function is called by {customer} to lock rewards for {arbiter} and {contractor}
-     * on the proposal {proposalCurrencyToken} balance. As a result of the function call
-     * contracts {currentState} will be set to PREPAID. Setting proposal to PREPAID is a signal for
-     * {contractor} to start performing task. To be more accurate, the function is increases
-     * {_stateTransitionDeadline} value to `now + 24 hours`. This deadline states interval within
-     * which {customer} can cancel proposal {closeProposal} and receive
-     * back locked {proposalCurrencyToken} tokens.
-     * When {_stateTransitionDeadline} expires, {contractor} can begin doing task
+     * @notice The function is called by `customer` to lock rewards for `arbiter` and `contractor`
+     * on the proposal `proposalCurrencyToken` balance. As a result of the function call
+     * contracts `currentState` will be set to `PREPAID`. Setting proposal to `PREPAID` is a signal
+     * for `contractor` to start performing task. To be more accurate, the function is increases
+     * `_stateTransitionDeadline` value to `now + 24 hours`. This deadline states interval within
+     * which `customer` can cancel proposal `closeProposal` and receive
+     * back locked `proposalCurrencyToken` tokens.
+     * When `_stateTransitionDeadline` expires, `contractor` can begin doing task
      * without any concerns.
      *
      * An important thing to mention:
-     * {customer} should {approve} respected amount of tokens to be called from him.
-     * @dev The function performs external call, after which {_stateTransitionDeadline} is set.
-     * That is the first time {_stateTransitionDeadline} is modified. Called only from `PROPOSED`.
+     * `customer` should `approve` respected amount of tokens to be called from him.
+     * @dev The function performs external call, after which `_stateTransitionDeadline` is set.
+     * That is the first time `_stateTransitionDeadline` is modified. Called only from `PROPOSED`.
      */
     function pushToPrepaidState() external {
         require(msg.sender == customer, "Invalid access");
@@ -111,18 +109,18 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
     }
 
     /**
-     * @notice The function is called by {contractor}. It signals that task was completed.
-     * If {customer} does not react with {startDispute} within 24 hours from the timestamp
+     * @notice The function is called by `contractor`. It signals that task was completed.
+     * If `customer` does not react with `startDispute` within 24 hours from the timestamp
      * when the function was called, then proposal can be closed with reward payouts
-     * for {contractor}.
-     * In this case, {customer} receives back {arbiterTokenReward}.
-     * @dev The function can't be called until {_stateTransitionDeadline} from {pushToPrepaidState}
-     * call is expired. {_stateTransitionDeadline} is modified the second time when
-     * the function is called. A new {_stateTransitionDeadline} defines deadline within which
-     * {startDispute} can be called and after which {closeProposal} is available.
+     * for `contractor`.
+     * In this case, `customer` receives back `arbiterTokenReward`.
+     * @dev The function can't be called until `_stateTransitionDeadline` from `pushToPrepaidState`
+     * call is expired. `_stateTransitionDeadline` is modified the second time when
+     * the function is called. A new `_stateTransitionDeadline` defines deadline within which
+     * `startDispute` can be called and after which `closeProposal` is available.
      * Called only from `PREPAID`.
      * @param doneTaskHash IPFS hash of the task result. This value is not stored in storage,
-     * it is just emitted. So parse {ProposalTaskWasDone} events to use these values in your
+     * it is just emitted. So parse `ProposalTaskWasDone` events to use these values in your
      * app.
      */
     function announceTaskCompleted(bytes calldata doneTaskHash) external {
@@ -143,16 +141,16 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
     }
 
     /**
-     * @notice The function is called by {customer} within secondly modified
-     * {_stateTransitionDeadline} deadline to show {customer} disagreement on task results.
-     * Accepts `newRewardToPay` argument that can be taken into account by {arbiter}
-     * when he {resolveDispute}. If {arbiter} does not show up within 24 hours from the
-     * function call, then {closeProposal} can be called.
-     * @dev The function modifies thirdly {_stateTransitionDeadline} deadline. As was stated
-     * previously, the {_stateTransitionDeadline} modification defines deadline for
-     * {resolveDispute} call by {arbiter}.
+     * @notice The function is called by `customer` within secondly modified
+     * `_stateTransitionDeadline` deadline to show `customer` disagreement on task results.
+     * Accepts `newRewardToPay` argument that can be taken into account by `arbiter`
+     * when he `resolveDispute`. If `arbiter` does not show up within 24 hours from the
+     * function call, then `closeProposal` can be called.
+     * @dev The function modifies thirdly `_stateTransitionDeadline` deadline. As was stated
+     * previously, the `_stateTransitionDeadline` modification defines deadline for
+     * `resolveDispute` call by `arbiter`.
      * Called only from `COMPLETED`.
-     * @param newRewardToPay "disputed" reward that {customer} thinks to be fair as a payout for
+     * @param newRewardToPay "disputed" reward that `customer` thinks to be fair as a payout for
      * done task. This value is just emitted, so an application should parse event logs to get it.
      */
     function startDispute(uint256 newRewardToPay) external {
@@ -172,17 +170,17 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
     }
 
     /**
-     * @notice The function is called by {arbiter} within thirdly modified
-     * {_stateTransitionDeadline} deadline to resolve dispute and execute fair
+     * @notice The function is called by `arbiter` within thirdly modified
+     * `_stateTransitionDeadline` deadline to resolve dispute and execute fair
      * (in accordance to arbiters opinion) payouts.
      * `disputedReward` can be lt `contractorTokenReward`, so differece between these amounts
-     * will be send back to {customer}.
-     * Also {arbiter} gets {arbiterTokenReward} for dispute resolve.
-     * @dev From 2 to 3 external calls to {proposalCurrencyToken} can be executed.
+     * will be send back to `customer`.
+     * Also `arbiter` gets `arbiterTokenReward` for dispute resolve.
+     * @dev From 2 to 3 external calls to `proposalCurrencyToken` can be executed.
      * After token transfers `selfdestruct` is executed.
      * Called only from `DISPUTE`.
-     * @param disputedReward {arbiter} decision on {contractor} reward for the done task.
-     * This amount of tokens will be send to {contractor}.
+     * @param disputedReward `arbiter` decision on `contractor` reward for the done task.
+     * This amount of tokens will be send to `contractor`.
      * @param arbiterSolution IPFS hash reference to arbiters solition data.
      */
     function resolveDispute(uint256 disputedReward, bytes calldata arbiterSolution)
@@ -210,9 +208,9 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
      * @notice The function can be called from `INIT`, `PROPOSED`, `PREPAID`, `COMPLETED` and
      * `DISPUTE` states. `INIT` and `PROPOSED` states allow calling the function any time it is
      * necessary by parties. Call conditionals from other states are defined in respected
-     * functions. Parties are stated in {onlyParties}.
+     * functions. Parties are stated in `onlyParties` modifer.
      * @dev Calls from `PREPAID`, `COMPLETED`, `DISPUTE` states execute
-     * {proposalCurrencyToken} transfers. `selfdestruct` is called after transfer executions.
+     * `proposalCurrencyToken` transfers. `selfdestruct` is called after transfer executions.
      */
     function closeProposal() external onlyParties {
         require(
@@ -240,7 +238,7 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
 }
 
 /**
- * @dev Abstract contract used to setup {Proposal}. Think of `setup` as of `constructor`.
+ * @dev Abstract contract used to setup `Proposal`. Think of `setup` as of `constructor`.
  */
 contract ProposalSetupper is ProposalStateTransitioner{
 
@@ -279,7 +277,7 @@ contract ProposalSetupper is ProposalStateTransitioner{
         emit ProposalWasSetUp(_customer, _contractor, _taskIPFSHash);
     }
 
-    ///@notice abstract
+    /// @notice abstract
     function internalSetup(
         address _arbiter,
         address _customer,
@@ -303,7 +301,7 @@ contract Proposal is ProposalSetupper {
     constructor() public ProposalSetupper() {}
 
     /**
-     * Performs logic of {setup} function.
+     * @dev Performs logic of `setup` function.
      */
     function internalSetup(
         address _arbiter,
@@ -329,7 +327,7 @@ contract Proposal is ProposalSetupper {
      * @param nextState state to be appointed as {currentState}
      * @param newDeadline deadline stated by contractor in `PROPOSED`.
      * @param contractorReward reward for contractor defined in `PROPOSED`.
-     * @param disputedRewardAmount {contractor} reward defined by {arbiter} in `DISPUTE` state.
+     * @param disputedRewardAmount `contractor` reward defined by `arbiter` in `DISPUTE` state.
      */
     function changeStateTo(
         States nextState,
