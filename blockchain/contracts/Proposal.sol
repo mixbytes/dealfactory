@@ -17,7 +17,7 @@ contract ProposalStateDataTransferer {
 
     IERC20 public proposalCurrencyToken;
 
-    uint256 public taskDeadline;
+    uint64 public taskDeadline;
     /**
      * @dev This state variable is used as an internal breaker/proceeder in different states.
      * For example:
@@ -29,7 +29,7 @@ contract ProposalStateDataTransferer {
      *     start dispute on reward for task completion. Proposal can be closed in this state
      *     after the period is expired.
      */
-    uint256 _stateTransitionDeadline;
+    uint64 _stateTransitionDeadline;
 
     uint256 public arbiterTokenReward;
     uint256 public contractorTokenReward;
@@ -53,7 +53,7 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
     enum States {ZS, INIT, PROPOSED, PREPAID, COMPLETED, DISPUTE, RESOLVED, CLOSED}
     States public currentState;
 
-    event ResponseToProposalWasReceived(uint256 deadline, uint256 reward);
+    event ResponseToProposalWasReceived(uint64 deadline, uint256 reward);
     event ProposalWasPrepaid(uint256 contractorReward, uint256 arbiterReward);
     event ProposalTaskWasDone(uint256 when, bytes solution);
     event ProposalDisputeStarted(uint256 newAmount);
@@ -69,7 +69,7 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
      * @param contractorReward reward amount which contractor gets if task was done within
      * deadline and without any disagreements from customer.
      */
-    function responseToProposal(uint256 contractorDeadline, uint256 contractorReward)
+    function responseToProposal(uint64 contractorDeadline, uint256 contractorReward)
         external
     {
         require(msg.sender == contractor, "Invalid access");
@@ -85,11 +85,12 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
 
     /**
      * @notice The function is called by {customer} to lock rewards for {arbiter} and {contractor}
-     * on the proposal {proposalCurrencyToken} balance. As a result of the function call contract {currentState}
-     * will be set to PREPAID. Setting proposal to PREPAID is a signal for {contractor} to start
-     * performing task. To be more accurate, the function is increasing {_stateTransitionDeadline}
-     * value to `now + 24 hours`. This deadline states interval within which {customer} can cancel
-     * proposal {closeProposal} and receive back locked {proposalCurrencyToken} tokens.
+     * on the proposal {proposalCurrencyToken} balance. As a result of the function call
+     * contracts {currentState} will be set to PREPAID. Setting proposal to PREPAID is a signal for
+     * {contractor} to start performing task. To be more accurate, the function is increases
+     * {_stateTransitionDeadline} value to `now + 24 hours`. This deadline states interval within
+     * which {customer} can cancel proposal {closeProposal} and receive
+     * back locked {proposalCurrencyToken} tokens.
      * When {_stateTransitionDeadline} expires, {contractor} can begin doing task
      * without any concerns.
      *
@@ -177,8 +178,8 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
      * `disputedReward` can be lt `contractorTokenReward`, so differece between these amounts
      * will be send back to {customer}.
      * Also {arbiter} gets {arbiterTokenReward} for dispute resolve.
-     * @dev From 2 to 3 external calls to {proposalCurrencyToken} can be executed. After token transfers
-     * `selfdestruct` is executed.
+     * @dev From 2 to 3 external calls to {proposalCurrencyToken} can be executed.
+     * After token transfers `selfdestruct` is executed.
      * Called only from `DISPUTE`.
      * @param disputedReward {arbiter} decision on {contractor} reward for the done task.
      * This amount of tokens will be send to {contractor}.
@@ -210,8 +211,8 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
      * `DISPUTE` states. `INIT` and `PROPOSED` states allow calling the function any time it is
      * necessary by parties. Call conditionals from other states are defined in respected
      * functions. Parties are stated in {onlyParties}.
-     * @dev Calls from `PREPAID`, `COMPLETED`, `DISPUTE` states execute {proposalCurrencyToken} transfers.
-     * `selfdestruct` is called after transfer executions.
+     * @dev Calls from `PREPAID`, `COMPLETED`, `DISPUTE` states execute
+     * {proposalCurrencyToken} transfers. `selfdestruct` is called after transfer executions.
      */
     function closeProposal() external onlyParties {
         require(
@@ -231,7 +232,7 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
     /// @notice abstract
     function changeStateTo(
         States nextState,
-        uint256 newDeadline,
+        uint64 newDeadline,
         uint256 contractorReward,
         uint256 disputedRewardAmount
     )
@@ -332,7 +333,7 @@ contract Proposal is ProposalSetupper {
      */
     function changeStateTo(
         States nextState,
-        uint256 newDeadline,
+        uint64 newDeadline,
         uint256 contractorReward,
         uint256 disputedRewardAmount
     )
@@ -348,13 +349,13 @@ contract Proposal is ProposalSetupper {
             nextState == States.DISPUTE)
         {
             if (nextState == States.PREPAID) {
-                uint256 transferingAmount = arbiterTokenReward.add(contractorTokenReward);
+                uint256 lockingAmount = arbiterTokenReward.add(contractorTokenReward);
                 require(
-                    proposalCurrencyToken.transferFrom(msg.sender, address(this), transferingAmount),
+                    proposalCurrencyToken.transferFrom(msg.sender, address(this), lockingAmount),
                     "Contractors and arbiters token reward lock on proposal contract failed"
                 );
             }
-            _stateTransitionDeadline = now.add(24 hours);
+            _stateTransitionDeadline = uint64(now.add(24 hours));
         }
 
         if (nextState == States.CLOSED || nextState == States.RESOLVED) {
