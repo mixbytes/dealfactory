@@ -18,7 +18,7 @@ contract ProposalMock is ProposalSetupper {
         require(arbiterReward > 0, "Arbiter award should be more than zero");
 
         arbiter = _arbiter;
-        arbiterDaiReward = arbiterReward + 100;
+        arbiterTokenReward = arbiterReward + 100;
         customer = _customer;
         contractor = _contractor;
 

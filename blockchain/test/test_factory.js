@@ -45,7 +45,7 @@ contract('ProposalFactory test', async accounts => {
 
     it('check setup of newly created proposal contract', async() => {
         newlyCreatedProposalContract = await ProposalContract.at(newlyCreatedProposalAddress);
-        let arbiterDaiRewardMainProposal = await newlyCreatedProposalContract.arbiterDaiReward.call()
+        let arbiterDaiRewardMainProposal = await newlyCreatedProposalContract.arbiterTokenReward.call()
         assert.equal(arbiterDaiRewardMainProposal.toNumber(), 100);
         
     });
@@ -66,7 +66,7 @@ contract('ProposalFactory test', async accounts => {
 
     it('check setup of the second created proposal contract', async() => {
         newlyCreatedProposalContract = await ProposalContract.at(newlyCreatedProposalAddress);
-        let arbiterDaiRewardMainProposal = await newlyCreatedProposalContract.arbiterDaiReward.call()
+        let arbiterDaiRewardMainProposal = await newlyCreatedProposalContract.arbiterTokenReward.call()
         assert.equal(arbiterDaiRewardMainProposal.toNumber(), 200); // look at ProposalMock
     });
 })

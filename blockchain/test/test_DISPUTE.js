@@ -189,7 +189,7 @@ contract('Proposal test on DISPUTE, RESOLVED and CLOSED after DISPUTE', async ac
 
     it('another reward and deadline', async() => {
         let currentDeadline = await proposalInstance.taskDeadline.call();
-        let currentReward = await proposalInstance.contractorDaiReward.call();
+        let currentReward = await proposalInstance.contractorTokenReward.call();
 
         let newDeadline = currentDeadline.toNumber() + 100;
         let newReward = currentReward.toNumber() - 500; // OVERFLOW!!
@@ -248,8 +248,8 @@ contract('Proposal test on DISPUTE, RESOLVED and CLOSED after DISPUTE', async ac
         await proposalInstance.pushToPrepaidState({from: CUSTOMER_1})
 
         // check the state
-        let arbiterReward = await proposalInstance.arbiterDaiReward.call();
-        let contractorReward = await proposalInstance.contractorDaiReward.call();
+        let arbiterReward = await proposalInstance.arbiterTokenReward.call();
+        let contractorReward = await proposalInstance.contractorTokenReward.call();
         let proposalDaiBalance = await token.balanceOf(proposalInstanceAddress);
         assert.equal(proposalDaiBalance.toNumber(), arbiterReward.toNumber() + contractorReward.toNumber())
 
@@ -372,7 +372,7 @@ contract('Proposal test on DISPUTE, RESOLVED and CLOSED after DISPUTE', async ac
             proposalInstance.startDispute(10, {from: CONTRACTOR_1})
         )
         
-        // new reward to pay should be lt stated contractorDaiReward
+        // new reward to pay should be lt stated contractorTokenReward
         await expectThrow(
             proposalInstance.startDispute(100, {from: CUSTOMER_1})
         )
@@ -426,7 +426,7 @@ contract('Proposal test on DISPUTE, RESOLVED and CLOSED after DISPUTE', async ac
         let end = start.add(time.duration.hours(25)); //!!!
         await time.increaseTo(end);
 
-        let contractorReward = await proposalInstance.contractorDaiReward.call();
+        let contractorReward = await proposalInstance.contractorTokenReward.call();
 
         await proposalInstance.closeProposal({from: CUSTOMER_1});
         let customerBalanceAfterClose = await token.balanceOf(CUSTOMER_1);
@@ -464,8 +464,8 @@ contract('Proposal test on DISPUTE, RESOLVED and CLOSED after DISPUTE', async ac
     it('transition from DISPUTE to RESOLVED', async() => {
         await revertToSnapShot(snapshotId);
 
-        let arbiterReward = await proposalInstance.arbiterDaiReward.call();
-        let contractorReward = await proposalInstance.contractorDaiReward.call();
+        let arbiterReward = await proposalInstance.arbiterTokenReward.call();
+        let contractorReward = await proposalInstance.contractorTokenReward.call();
         let customerBalanceBeforeResolve = 99940;
 
         //arbiter came withing 24 hours

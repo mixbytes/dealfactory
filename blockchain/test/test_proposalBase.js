@@ -181,7 +181,7 @@ contract('Proposal test base', async accounts => {
         assert.equal(curState, STATES.PROPOSED);
         
         //check new reward
-        let contractorReward = await newlyCreatedProposalContract.contractorDaiReward.call();
+        let contractorReward = await newlyCreatedProposalContract.contractorTokenReward.call();
         assert.equal(contractorReward, newReward);
 
         // check new deadline
@@ -198,8 +198,8 @@ contract('Proposal test base', async accounts => {
     })
 
     it('should go forward to prepaid state', async() => {
-        let arbiterReward = await newlyCreatedProposalContract.arbiterDaiReward.call();
-        let contractorReward = await newlyCreatedProposalContract.contractorDaiReward.call();
+        let arbiterReward = await newlyCreatedProposalContract.arbiterTokenReward.call();
+        let contractorReward = await newlyCreatedProposalContract.contractorTokenReward.call();
         let approveAmount = arbiterReward.toNumber() + contractorReward.toNumber();
         await token.approve(newlyCreatedProposalAddress, approveAmount, {from: CUSTOMER_1});
 
@@ -321,8 +321,8 @@ contract('Proposal test base', async accounts => {
     /*
     it('transition from completed to close', async() => {
         let customerBalanceBeforeClose = await token.balanceOf(CUSTOMER_1);
-        let arbiterDaiReward = await newlyCreatedProposalContract.arbiterDaiReward.call();
-        let contractorReward = await newlyCreatedProposalContract.contractorDaiReward.call();
+        let arbiterTokenReward = await newlyCreatedProposalContract.arbiterTokenReward.call();
+        let contractorReward = await newlyCreatedProposalContract.contractorTokenReward.call();
         await newlyCreatedProposalContract.closeProposal({from: CONTRACTOR_1});
 
         // check invariants
@@ -330,7 +330,7 @@ contract('Proposal test base', async accounts => {
         assert.equal(contractorReward.toNumber(), balanceOfContractor.toNumber());
 
         let customerBalanceAfterClose = await token.balanceOf(CUSTOMER_1);
-        assert.equal(customerBalanceAfterClose.toNumber(), customerBalanceBeforeClose.toNumber() + arbiterDaiReward.toNumber())
+        assert.equal(customerBalanceAfterClose.toNumber(), customerBalanceBeforeClose.toNumber() + arbiterTokenReward.toNumber())
     })
     */
 
@@ -355,7 +355,7 @@ contract('Proposal test base', async accounts => {
         // reverting back time
         await revertToSnapShot(snapshotId);
 
-        let currentReward = await newlyCreatedProposalContract.contractorDaiReward.call()
+        let currentReward = await newlyCreatedProposalContract.contractorTokenReward.call()
         let disputedReward = currentReward.toNumber() - 100;
         let tx = await newlyCreatedProposalContract.startDispute(disputedReward, {from: CUSTOMER_1});
         // check invariants
@@ -386,8 +386,8 @@ contract('Proposal test base', async accounts => {
         await time.increaseTo(end);
 
         let customerBalanceBeforeClose = await token.balanceOf(CUSTOMER_1);
-        let arbiterDaiReward = await newlyCreatedProposalContract.arbiterDaiReward.call();
-        let contractorReward = await newlyCreatedProposalContract.contractorDaiReward.call();
+        let arbiterTokenReward = await newlyCreatedProposalContract.arbiterTokenReward.call();
+        let contractorReward = await newlyCreatedProposalContract.contractorTokenReward.call();
 
         await newlyCreatedProposalContract.closeProposal({from: CONTRACTOR_1})
 
@@ -396,7 +396,7 @@ contract('Proposal test base', async accounts => {
         assert.equal(contractorReward.toNumber(), balanceOfContractor.toNumber());
 
         let customerBalanceAfterClose = await token.balanceOf(CUSTOMER_1);
-        assert.equal(customerBalanceAfterClose.toNumber(), customerBalanceBeforeClose.toNumber() + arbiterDaiReward.toNumber())
+        assert.equal(customerBalanceAfterClose.toNumber(), customerBalanceBeforeClose.toNumber() + arbiterTokenReward.toNumber())
     })
     */
 

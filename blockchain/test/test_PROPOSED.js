@@ -160,7 +160,7 @@ contract('Proposal test with cancellation on PROPOSED', async accounts => {
 
     it('another reward and deadline', async() => {
         let currentDeadline = await proposalInstance.taskDeadline.call();
-        let currentReward = await proposalInstance.contractorDaiReward.call();
+        let currentReward = await proposalInstance.contractorTokenReward.call();
 
         let newDeadline = currentDeadline.toNumber() + 100;
         let newReward = currentReward.toNumber() - 50; // overflow currentReward.toNumber() - 500

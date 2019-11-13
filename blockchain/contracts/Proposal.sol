@@ -31,8 +31,8 @@ contract ProposalStateDataTransferer {
      */
     uint256 _stateTransitionDeadline;
 
-    uint256 public arbiterDaiReward;
-    uint256 public contractorDaiReward;
+    uint256 public arbiterTokenReward;
+    uint256 public contractorTokenReward;
 }
 
 /**
@@ -106,7 +106,7 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
         );
         changeStateTo(States.PREPAID, 0, 0, 0);
 
-        emit ProposalWasPrepaid(contractorDaiReward, arbiterDaiReward);
+        emit ProposalWasPrepaid(contractorTokenReward, arbiterTokenReward);
     }
 
     /**
@@ -114,7 +114,7 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
      * If {customer} does not react with {startDispute} within 24 hours from the timestamp
      * when the function was called, then proposal can be closed with reward payouts
      * for {contractor}.
-     * In this case, {customer} receives back {arbiterDaiReward}.
+     * In this case, {customer} receives back {arbiterTokenReward}.
      * @dev The function can't be called until {_stateTransitionDeadline} from {pushToPrepaidState}
      * call is expired. {_stateTransitionDeadline} is modified the second time when
      * the function is called. A new {_stateTransitionDeadline} defines deadline within which
@@ -164,7 +164,7 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
             _stateTransitionDeadline >= now,
             "More than 24h past from contractors solution publication"
         );
-        require(newRewardToPay < contractorDaiReward, "Irrational param value");
+        require(newRewardToPay < contractorTokenReward, "Irrational param value");
         changeStateTo(States.DISPUTE, 0, 0, 0);
 
         emit ProposalDisputeStarted(newRewardToPay);
@@ -174,8 +174,9 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
      * @notice The function is called by {arbiter} within thirdly modified
      * {_stateTransitionDeadline} deadline to resolve dispute and execute fair
      * (in accordance to arbiters opinion) payouts.
-     * `disputedReward` can be lt `contractorDaiReward`, so differece between these amounts will be
-     * send back to {customer}. Also {arbiter} gets {arbiterDaiReward} for dispute resolve.
+     * `disputedReward` can be lt `contractorTokenReward`, so differece between these amounts
+     * will be send back to {customer}.
+     * Also {arbiter} gets {arbiterTokenReward} for dispute resolve.
      * @dev From 2 to 3 external calls to {daiToken} can be executed. After token transfers
      * `selfdestruct` is executed.
      * Called only from `DISPUTE`.
@@ -196,7 +197,7 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
             "More than 24h past from dispute announcement"
         );
         require(
-            disputedReward > 0 && disputedReward <= contractorDaiReward,
+            disputedReward > 0 && disputedReward <= contractorTokenReward,
             "Wrong value for reward"
         );
 
@@ -313,7 +314,7 @@ contract Proposal is ProposalSetupper {
         internal
     {
         arbiter = _arbiter;
-        arbiterDaiReward = arbiterReward;
+        arbiterTokenReward = arbiterReward;
         customer = _customer;
         contractor = _contractor;
 
@@ -339,7 +340,7 @@ contract Proposal is ProposalSetupper {
     {
         if (nextState == States.PROPOSED) {
             taskDeadline = newDeadline;
-            contractorDaiReward = contractorReward;
+            contractorTokenReward = contractorReward;
         }
 
         if (nextState == States.PREPAID ||
@@ -347,7 +348,7 @@ contract Proposal is ProposalSetupper {
             nextState == States.DISPUTE)
         {
             if (nextState == States.PREPAID) {
-                uint256 transferingAmount = arbiterDaiReward.add(contractorDaiReward);
+                uint256 transferingAmount = arbiterTokenReward.add(contractorTokenReward);
                 require(
                     daiToken.transferFrom(msg.sender, address(this), transferingAmount),
                     "Contractors and arbiters token reward lock on proposal contract failed"
@@ -359,7 +360,7 @@ contract Proposal is ProposalSetupper {
         if (nextState == States.CLOSED || nextState == States.RESOLVED) {
             // можно сократить еще?
             if (currentState == States.PREPAID) {
-                uint256 transferingAmount = arbiterDaiReward.add(contractorDaiReward);
+                uint256 transferingAmount = arbiterTokenReward.add(contractorTokenReward);
                 require(
                     daiToken.transfer(customer, transferingAmount),
                     "Token transfer in cancellation state failed"
@@ -369,8 +370,8 @@ contract Proposal is ProposalSetupper {
                 currentState == States.DISPUTE && disputedRewardAmount == 0)
             {
                 require(
-                    daiToken.transfer(contractor, contractorDaiReward) &&
-                    daiToken.transfer(customer, arbiterDaiReward),
+                    daiToken.transfer(contractor, contractorTokenReward) &&
+                    daiToken.transfer(customer, arbiterTokenReward),
                     "Token transfer in cancellation state failed"
                 );
             }
@@ -378,12 +379,12 @@ contract Proposal is ProposalSetupper {
             if (currentState == States.DISPUTE && disputedRewardAmount != 0) {
                 require(
                     daiToken.transfer(contractor, disputedRewardAmount) &&
-                    daiToken.transfer(arbiter, arbiterDaiReward),
+                    daiToken.transfer(arbiter, arbiterTokenReward),
                     "Token transfer in cancellation state failed"
                 );
 
                 // третья вложенность?
-                uint256 customerChange = contractorDaiReward.sub(disputedRewardAmount);
+                uint256 customerChange = contractorTokenReward.sub(disputedRewardAmount);
                 if (customerChange != 0) {
                     require(
                         daiToken.transfer(customer, customerChange),

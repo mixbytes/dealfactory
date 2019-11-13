@@ -189,7 +189,7 @@ contract('Proposal test with cancellation on PREPAID', async accounts => {
 
     it('another reward and deadline', async() => {
         let currentDeadline = await proposalInstance.taskDeadline.call();
-        let currentReward = await proposalInstance.contractorDaiReward.call();
+        let currentReward = await proposalInstance.contractorTokenReward.call();
 
         let newDeadline = currentDeadline.toNumber() + 100;
         let newReward = currentReward.toNumber() - 500; // OVERFLOW!!
@@ -248,8 +248,8 @@ contract('Proposal test with cancellation on PREPAID', async accounts => {
         await proposalInstance.pushToPrepaidState({from: CUSTOMER_1})
 
         // check the state
-        let arbiterReward = await proposalInstance.arbiterDaiReward.call();
-        let contractorReward = await proposalInstance.contractorDaiReward.call();
+        let arbiterReward = await proposalInstance.arbiterTokenReward.call();
+        let contractorReward = await proposalInstance.contractorTokenReward.call();
         let proposalDaiBalance = await token.balanceOf(proposalInstanceAddress);
         assert.equal(proposalDaiBalance.toNumber(), arbiterReward.toNumber() + contractorReward.toNumber())
 
@@ -301,8 +301,8 @@ contract('Proposal test with cancellation on PREPAID', async accounts => {
     it('closing proposal from PREPAID', async() => {
         // reverting back time
         await revertToSnapShot(snapshotId);
-        let arbiterReward = await proposalInstance.arbiterDaiReward.call();
-        let contractorReward = await proposalInstance.contractorDaiReward.call();
+        let arbiterReward = await proposalInstance.arbiterTokenReward.call();
+        let contractorReward = await proposalInstance.contractorTokenReward.call();
         let customerTokenBalanceBeforeClose = await token.balanceOf(CUSTOMER_1);
         
         await proposalInstance.closeProposal({from: CUSTOMER_1})
@@ -316,8 +316,8 @@ contract('Proposal test with cancellation on PREPAID', async accounts => {
     it('closing proposal from PREPAID due to task deadline', async() => {
         // reverting back time
         await revertToSnapShot(snapshotId);
-        let arbiterReward = await proposalInstance.arbiterDaiReward.call();
-        let contractorReward = await proposalInstance.contractorDaiReward.call();
+        let arbiterReward = await proposalInstance.arbiterTokenReward.call();
+        let contractorReward = await proposalInstance.contractorTokenReward.call();
         let customerTokenBalanceBeforeClose = await token.balanceOf(CUSTOMER_1);
 
         await time.advanceBlock();
