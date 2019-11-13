@@ -15,7 +15,7 @@ contract ProposalStateDataTransferer {
     address public contractor;
     address public customer;
 
-    IERC20 public daiToken;
+    IERC20 public proposalCurrencyToken;
 
     uint256 public taskDeadline;
     /**
@@ -85,11 +85,11 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
 
     /**
      * @notice The function is called by {customer} to lock rewards for {arbiter} and {contractor}
-     * on the proposal {daiToken} balance. As a result of the function call contract {currentState}
+     * on the proposal {proposalCurrencyToken} balance. As a result of the function call contract {currentState}
      * will be set to PREPAID. Setting proposal to PREPAID is a signal for {contractor} to start
      * performing task. To be more accurate, the function is increasing {_stateTransitionDeadline}
      * value to `now + 24 hours`. This deadline states interval within which {customer} can cancel
-     * proposal {closeProposal} and receive back locked {daiToken} tokens.
+     * proposal {closeProposal} and receive back locked {proposalCurrencyToken} tokens.
      * When {_stateTransitionDeadline} expires, {contractor} can begin doing task
      * without any concerns.
      *
@@ -177,7 +177,7 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
      * `disputedReward` can be lt `contractorTokenReward`, so differece between these amounts
      * will be send back to {customer}.
      * Also {arbiter} gets {arbiterTokenReward} for dispute resolve.
-     * @dev From 2 to 3 external calls to {daiToken} can be executed. After token transfers
+     * @dev From 2 to 3 external calls to {proposalCurrencyToken} can be executed. After token transfers
      * `selfdestruct` is executed.
      * Called only from `DISPUTE`.
      * @param disputedReward {arbiter} decision on {contractor} reward for the done task.
@@ -210,7 +210,7 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
      * `DISPUTE` states. `INIT` and `PROPOSED` states allow calling the function any time it is
      * necessary by parties. Call conditionals from other states are defined in respected
      * functions. Parties are stated in {onlyParties}.
-     * @dev Calls from `PREPAID`, `COMPLETED`, `DISPUTE` states execute {daiToken} transfers.
+     * @dev Calls from `PREPAID`, `COMPLETED`, `DISPUTE` states execute {proposalCurrencyToken} transfers.
      * `selfdestruct` is called after transfer executions.
      */
     function closeProposal() external onlyParties {
@@ -318,7 +318,7 @@ contract Proposal is ProposalSetupper {
         customer = _customer;
         contractor = _contractor;
 
-        daiToken = token;
+        proposalCurrencyToken = token;
 
         currentState = States.INIT;
     }
@@ -350,7 +350,7 @@ contract Proposal is ProposalSetupper {
             if (nextState == States.PREPAID) {
                 uint256 transferingAmount = arbiterTokenReward.add(contractorTokenReward);
                 require(
-                    daiToken.transferFrom(msg.sender, address(this), transferingAmount),
+                    proposalCurrencyToken.transferFrom(msg.sender, address(this), transferingAmount),
                     "Contractors and arbiters token reward lock on proposal contract failed"
                 );
             }
@@ -362,7 +362,7 @@ contract Proposal is ProposalSetupper {
             if (currentState == States.PREPAID) {
                 uint256 transferingAmount = arbiterTokenReward.add(contractorTokenReward);
                 require(
-                    daiToken.transfer(customer, transferingAmount),
+                    proposalCurrencyToken.transfer(customer, transferingAmount),
                     "Token transfer in cancellation state failed"
                 );
             }
@@ -370,16 +370,16 @@ contract Proposal is ProposalSetupper {
                 currentState == States.DISPUTE && disputedRewardAmount == 0)
             {
                 require(
-                    daiToken.transfer(contractor, contractorTokenReward) &&
-                    daiToken.transfer(customer, arbiterTokenReward),
+                    proposalCurrencyToken.transfer(contractor, contractorTokenReward) &&
+                    proposalCurrencyToken.transfer(customer, arbiterTokenReward),
                     "Token transfer in cancellation state failed"
                 );
             }
 
             if (currentState == States.DISPUTE && disputedRewardAmount != 0) {
                 require(
-                    daiToken.transfer(contractor, disputedRewardAmount) &&
-                    daiToken.transfer(arbiter, arbiterTokenReward),
+                    proposalCurrencyToken.transfer(contractor, disputedRewardAmount) &&
+                    proposalCurrencyToken.transfer(arbiter, arbiterTokenReward),
                     "Token transfer in cancellation state failed"
                 );
 
@@ -387,7 +387,7 @@ contract Proposal is ProposalSetupper {
                 uint256 customerChange = contractorTokenReward.sub(disputedRewardAmount);
                 if (customerChange != 0) {
                     require(
-                        daiToken.transfer(customer, customerChange),
+                        proposalCurrencyToken.transfer(customer, customerChange),
                         "Customer token change transfer failed"
                     );
                 }

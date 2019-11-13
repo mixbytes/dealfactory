@@ -22,7 +22,7 @@ contract ProposalMock is ProposalSetupper {
         customer = _customer;
         contractor = _contractor;
 
-        daiToken = token;
+        proposalCurrencyToken = token;
 
         currentState = States.INIT;
     }
