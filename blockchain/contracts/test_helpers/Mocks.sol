@@ -11,7 +11,7 @@ contract ProposalMock is ProposalSetupper {
         address _customer,
         uint256 arbiterReward,
         address _contractor,
-        address token
+        IERC20 token
     )
         internal
     {

@@ -41,13 +41,13 @@ contract ProposalFactory is Ownable {
      * @param arbiterReward amount of tokens payed for arbiter when he resolves dispute.
      * @param proposalTaskIPFSHash IPFS content reference to callers proposal task.
      * @param contractor task assignee.
-     * @param tokenAddress token used for payments.
+     * @param token token used for payments.
      */
     function createConfiguredProposal(
         uint256 arbiterReward,
         bytes calldata proposalTaskIPFSHash,
         address contractor,
-        address tokenAddress
+        IERC20 token
     )
         external
     {
@@ -58,7 +58,7 @@ contract ProposalFactory is Ownable {
             arbiterReward,
             proposalTaskIPFSHash,
             contractor,
-            tokenAddress
+            token
         );
         emit ProposalCreated(msg.sender, newlyDeployedProposalContract);
     }

@@ -15,7 +15,7 @@ contract ProposalStateDataTransferer {
     address public contractor;
     address public customer;
 
-    address public daiToken;
+    IERC20 public daiToken;
 
     uint256 public taskDeadline;
     /**
@@ -265,7 +265,7 @@ contract ProposalSetupper is ProposalStateTransitioner{
         uint256 arbiterReward,
         bytes calldata _taskIPFSHash,
         address _contractor,
-        address token
+        IERC20 token
     )
         external
     {
@@ -283,7 +283,7 @@ contract ProposalSetupper is ProposalStateTransitioner{
         address _customer,
         uint256 arbiterReward,
         address _contractor,
-        address token
+        IERC20 token
     )
         internal;
 }
@@ -308,7 +308,7 @@ contract Proposal is ProposalSetupper {
         address _customer,
         uint256 arbiterReward,
         address _contractor,
-        address token
+        IERC20 token
     )
         internal
     {
@@ -349,7 +349,7 @@ contract Proposal is ProposalSetupper {
             if (nextState == States.PREPAID) {
                 uint256 transferingAmount = arbiterDaiReward.add(contractorDaiReward);
                 require(
-                    IERC20(daiToken).transferFrom(msg.sender, address(this), transferingAmount),
+                    daiToken.transferFrom(msg.sender, address(this), transferingAmount),
                     "Contractors and arbiters token reward lock on proposal contract failed"
                 );
             }
@@ -361,7 +361,7 @@ contract Proposal is ProposalSetupper {
             if (currentState == States.PREPAID) {
                 uint256 transferingAmount = arbiterDaiReward.add(contractorDaiReward);
                 require(
-                    IERC20(daiToken).transfer(customer, transferingAmount),
+                    daiToken.transfer(customer, transferingAmount),
                     "Token transfer in cancellation state failed"
                 );
             }
@@ -369,16 +369,16 @@ contract Proposal is ProposalSetupper {
                 currentState == States.DISPUTE && disputedRewardAmount == 0)
             {
                 require(
-                    IERC20(daiToken).transfer(contractor, contractorDaiReward) &&
-                    IERC20(daiToken).transfer(customer, arbiterDaiReward),
+                    daiToken.transfer(contractor, contractorDaiReward) &&
+                    daiToken.transfer(customer, arbiterDaiReward),
                     "Token transfer in cancellation state failed"
                 );
             }
 
             if (currentState == States.DISPUTE && disputedRewardAmount != 0) {
                 require(
-                    IERC20(daiToken).transfer(contractor, disputedRewardAmount) &&
-                    IERC20(daiToken).transfer(arbiter, arbiterDaiReward),
+                    daiToken.transfer(contractor, disputedRewardAmount) &&
+                    daiToken.transfer(arbiter, arbiterDaiReward),
                     "Token transfer in cancellation state failed"
                 );
 
@@ -386,7 +386,7 @@ contract Proposal is ProposalSetupper {
                 uint256 customerChange = contractorDaiReward.sub(disputedRewardAmount);
                 if (customerChange != 0) {
                     require(
-                        IERC20(daiToken).transfer(customer, customerChange),
+                        daiToken.transfer(customer, customerChange),
                         "Customer token change transfer failed"
                     );
                 }
