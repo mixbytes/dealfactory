@@ -1,0 +1,398 @@
+[
+	{
+		"constant": false,
+		"inputs": [
+			{
+				"internalType": "bytes",
+				"name": "doneTaskHash",
+				"type": "bytes"
+			}
+		],
+		"name": "announceTaskCompleted",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [],
+		"name": "closeProposal",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "who",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "enum ProposalStateTransitioner.States",
+				"name": "currentState",
+				"type": "uint8"
+			}
+		],
+		"name": "ProposalCloseWasCalledBy",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "newAmount",
+				"type": "uint256"
+			}
+		],
+		"name": "ProposalDisputeStarted",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "when",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "bytes",
+				"name": "solution",
+				"type": "bytes"
+			}
+		],
+		"name": "ProposalTaskWasDone",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "contractorReward",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "arbiterReward",
+				"type": "uint256"
+			}
+		],
+		"name": "ProposalWasPrepaid",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "bytes",
+				"name": "solutionHash",
+				"type": "bytes"
+			}
+		],
+		"name": "ProposalWasResolved",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "customer",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "contractor",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "bytes",
+				"name": "task",
+				"type": "bytes"
+			}
+		],
+		"name": "ProposalWasSetUp",
+		"type": "event"
+	},
+	{
+		"constant": false,
+		"inputs": [],
+		"name": "pushToPrepaidState",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "disputedReward",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bytes",
+				"name": "arbiterSolution",
+				"type": "bytes"
+			}
+		],
+		"name": "resolveDispute",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [
+			{
+				"internalType": "uint64",
+				"name": "contractorDeadline",
+				"type": "uint64"
+			},
+			{
+				"internalType": "uint256",
+				"name": "contractorReward",
+				"type": "uint256"
+			}
+		],
+		"name": "responseToProposal",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "uint64",
+				"name": "deadline",
+				"type": "uint64"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "reward",
+				"type": "uint256"
+			}
+		],
+		"name": "ResponseToProposalWasReceived",
+		"type": "event"
+	},
+	{
+		"constant": false,
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_arbiter",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_customer",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "arbiterReward",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bytes",
+				"name": "_taskIPFSHash",
+				"type": "bytes"
+			},
+			{
+				"internalType": "address",
+				"name": "_contractor",
+				"type": "address"
+			},
+			{
+				"internalType": "contract IERC20",
+				"name": "token",
+				"type": "address"
+			}
+		],
+		"name": "setup",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "newRewardToPay",
+				"type": "uint256"
+			}
+		],
+		"name": "startDispute",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "arbiter",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "arbiterTokenReward",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "contractor",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "contractorTokenReward",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "currentState",
+		"outputs": [
+			{
+				"internalType": "enum ProposalStateTransitioner.States",
+				"name": "",
+				"type": "uint8"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "customer",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "factory",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "proposalCurrencyToken",
+		"outputs": [
+			{
+				"internalType": "contract IERC20",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "taskDeadline",
+		"outputs": [
+			{
+				"internalType": "uint64",
+				"name": "",
+				"type": "uint64"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	}
+]
