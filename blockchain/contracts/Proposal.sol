@@ -86,7 +86,7 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
      * on the proposal `proposalCurrencyToken` balance. As a result of the function call
      * contracts `currentState` will be set to `PREPAID`. Setting proposal to `PREPAID` is a signal
      * for `contractor` to start performing task. To be more accurate, the function is increases
-     * `_stateTransitionDeadline` value to `now + 24 hours`. This deadline states interval within
+     * `_stateTransitionDeadline` value to `now + 24 hours`and this deadline states interval within
      * which `customer` can cancel proposal `closeProposal` and receive
      * back locked `proposalCurrencyToken` tokens.
      * When `_stateTransitionDeadline` expires, `contractor` can begin doing task
@@ -173,7 +173,7 @@ contract ProposalStateTransitioner is ProposalStateDataTransferer {
      * @notice The function is called by `arbiter` within thirdly modified
      * `_stateTransitionDeadline` deadline to resolve dispute and execute fair
      * (in accordance to arbiters opinion) payouts.
-     * `disputedReward` can be lt `contractorTokenReward`, so differece between these amounts
+     * `disputedReward` can't be lt `contractorTokenReward`, so differece between these amounts
      * will be send back to `customer`.
      * Also `arbiter` gets `arbiterTokenReward` for dispute resolve.
      * @dev From 2 to 3 external calls to `proposalCurrencyToken` can be executed.
