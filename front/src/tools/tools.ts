@@ -17,6 +17,6 @@ const getWeb3 = async () => {
     throw new Error("No etherium provider");
 };
 
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-
-export {getWeb3};
+export {sleep, getWeb3};
