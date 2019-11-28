@@ -4,14 +4,12 @@ import Web3 from "web3";
 
 export interface AppState {
     proposals: Proposal[],
-    web3?: Web3,
-    myAddress: string
+    web3?: Web3
 }
 
 const initialState: AppState = {
     proposals: [],
-    web3: undefined,
-    myAddress: ""
+    web3: undefined
 };
 
 function appReducer(
@@ -29,12 +27,6 @@ function appReducer(
             return {
                 ...state,
                 web3: action.payload
-            };
-
-        case Actions.SET_MY_ADDRESS:
-            return {
-                ...state,
-                myAddress: action.payload
             };
 
         default:

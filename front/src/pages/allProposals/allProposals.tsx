@@ -3,7 +3,7 @@ import './allProposals.css';
 import {connect} from "react-redux";
 import {mapDispatchToProps, mapStateToProps, ReduxProps} from "../../store";
 import {Grid, Paper, Typography} from "@material-ui/core";
-import Proposal, {Role, State} from "../../model/proposal";
+import Proposal, {Role} from "../../model/proposal";
 import ProposalView from "../../components/proposalView/proposalView";
 
 class AllProposals extends React.Component<ReduxProps> {
@@ -15,19 +15,23 @@ class AllProposals extends React.Component<ReduxProps> {
     render() {
         const proposals = this.props.proposals;
 
-        const myProposals = proposals.filter(proposal => proposal.role(this.props.myAddress) !== Role.None);
-        const openProposals = proposals.filter(proposal =>
-            proposal.role(this.props.myAddress) === Role.None && +proposal.currentState === State.INIT
-        );
+        console.log(proposals);
+
+        const myProposals = proposals.filter(proposal =>
+            proposal.role === Role.Customer
+        ).reverse();
+        const forMe = proposals.filter(proposal =>
+            proposal.role === Role.Contractor
+        ).reverse();
 
         return (
             <div>
                 <Grid container>
-                    <Grid item xs>
+                    <Grid xs item>
                         {this.renderProposalsList("My tasks", myProposals)}
                     </Grid>
-                    <Grid item xs>
-                        {this.renderProposalsList("Open tasks", openProposals)}
+                    <Grid xs item>
+                        {this.renderProposalsList("Tasks for me", forMe)}
                     </Grid>
                 </Grid>
             </div>
@@ -36,7 +40,7 @@ class AllProposals extends React.Component<ReduxProps> {
 
     renderProposalsList(name: String, proposals: Proposal[]) {
         return (
-            <div style={{padding: 10}}>
+            <div style={{padding: 10, minWidth: 600}}>
                 <Paper>
                     <Typography variant={"h3"} gutterBottom style={{padding: 10}}>
                         {name}
