@@ -56,19 +56,24 @@ const ProposalView: React.FC<Props & ReduxProps> = (props) => {
                 return "Proposed";
             case State.PREPAID:
                 return "Prepaid";
+            case State.COMPLETED:
+                return "Completed";
             default:
                 return "Unknown";
         }
     })();
 
+    const closable = state === State.INIT || state === State.PROPOSED ||
+        state === State.PREPAID && (
+            proposal.role === Role.Customer
+        ) ||
+        (state === State.COMPLETED || state === State.DISPUTE);
+
     return (
         <Card style={{backgroundColor: "#64bbed"}}>
             <CloseDialog proposal={proposal}
+                         onClose={() => setCloseDialog(false)}
                          onSubmit={() => setCloseDialog(false)}
-                         onClose={() => {
-                             props.updateProposals(props.proposals.filter(p => p.address !== proposal.address));
-                             setCloseDialog(false);
-                         }}
                          open={closeDialog}
             />
             <ResponseDialog proposal={proposal}
@@ -109,7 +114,7 @@ const ProposalView: React.FC<Props & ReduxProps> = (props) => {
                 </ExpansionPanel>
                 <DialogActions style={{paddingBottom: 0}}>
                     {proposal.currentState === State.COMPLETED &&
-                    <a href={`https://ipfs.io/ipfs/`} download
+                    <a href={`https://ipfs.io/ipfs/${proposal.doneIpfsHash}`} download
                        style={{textDecoration: "none"}}>
                         <Button color="secondary" variant={"outlined"}>
                             Download solution
@@ -122,12 +127,10 @@ const ProposalView: React.FC<Props & ReduxProps> = (props) => {
                             Download task
                         </Button>
                     </a>
-                    {proposal.role === Role.Customer ?
+                    {closable &&
                         <Button color={"secondary"} variant={"contained"} onClick={() => setCloseDialog(true)}>
                             Close
                         </Button>
-                        :
-                        null
                     }
                     {proposal.role === Role.Contractor && proposal.currentState === State.INIT ?
                         <Button color={"secondary"} variant={"contained"} onClick={() => setResponseDialog(true)}>

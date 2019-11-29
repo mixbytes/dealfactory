@@ -1,6 +1,6 @@
 import React from 'react';
 import './app.css';
-import {getWeb3, sleep} from "../../tools/tools";
+import {getWeb3} from "../../tools/tools";
 import Proposal from "../../model/proposal";
 import {connect} from "react-redux";
 import {mapDispatchToProps, mapStateToProps, ReduxProps} from "../../store";
@@ -26,7 +26,7 @@ class App extends React.Component<ReduxProps, State> {
     componentDidMount() {
         getWeb3().then(web3 => {
             this.props.setWeb3(web3);
-            this.startUpdateProposalsCycle(web3);
+            this.subscribeToProposals(web3);
         }).catch(e => {
             console.error(e);
         });
@@ -60,17 +60,10 @@ class App extends React.Component<ReduxProps, State> {
         );
     }
 
-    private async startUpdateProposalsCycle(web3: Web3) {
-        // Start infinite loop of updating all proposals information
-        // noinspection InfiniteLoopJS
-        while (true) {
-            try {
-                let allProposals = await Proposal.all(web3);
-                this.props.updateProposals(allProposals);
-            } finally {
-                await sleep(3000);
-            }
-        }
+    private subscribeToProposals(web3: Web3) {
+        Proposal.subscribeToFactory(web3, proposal => {
+            this.props.updateProposals(proposal);
+        });
     }
 }
 

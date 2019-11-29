@@ -4,8 +4,7 @@ import Web3 from "web3";
 
 export enum Actions {
     UPDATE_PROPOSALS,
-    SET_WEB3,
-    SET_MY_ADDRESS
+    SET_WEB3
 }
 
 interface BaseAction<Type, Payload> extends Action<Type> {

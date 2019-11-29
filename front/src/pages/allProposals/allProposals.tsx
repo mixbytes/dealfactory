@@ -13,7 +13,7 @@ class AllProposals extends React.Component<ReduxProps> {
     }
 
     render() {
-        const proposals = this.props.proposals;
+        const proposals = Array.from(this.props.proposals.values());
 
         console.log(proposals);
 

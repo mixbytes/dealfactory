@@ -119,7 +119,7 @@ const NewProposalDialog: React.FC<Props & ReduxProps> = (props) => {
                     onChange={(e) => setForm({...form, tokenAddress: e.target.value})}
                     required
                     margin="dense"
-                    label="The address of currency token account"
+                    label="The address of currency token account (erc20)"
                     fullWidth
                 />
                 <TextField

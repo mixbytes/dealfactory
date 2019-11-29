@@ -2,6 +2,7 @@ import Web3 from "web3";
 import BN from 'bn.js';
 import ipfsClient from "ipfs-http-client";
 import config from "../config/config";
+import {Contract, EventData} from 'web3-eth-contract';
 
 const getWeb3 = async () => {
     // @ts-ignore
@@ -64,4 +65,24 @@ async function uploadFileToIpfs(file: File, setProgress?: (progress: number) => 
     return meta[0];
 }
 
-export {sleep, getWeb3, notEmpty, myAddress, toWei, fromWei, uploadFileToIpfs};
+function subscribeToEvent(contract: Contract, name: string, onEvents: (events: EventData[], onInit: boolean) => any) {
+    contract.getPastEvents(name, {fromBlock: 0})
+        .then(events => {
+                let maxBlock = 0;
+                events.forEach(event => {
+                    maxBlock = maxBlock > event.blockNumber ? maxBlock : event.blockNumber;
+                });
+                onEvents(events, true);
+                return maxBlock;
+            }
+        )
+        .then((maxBlock) => {
+            contract.events[name]({
+                fromBlock: maxBlock + 1
+            }, (err, event) => {
+                onEvents([event], false);
+            })
+        });
+}
+
+export {sleep, getWeb3, notEmpty, myAddress, toWei, fromWei, uploadFileToIpfs, subscribeToEvent};

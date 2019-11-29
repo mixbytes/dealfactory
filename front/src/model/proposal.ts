@@ -2,15 +2,17 @@ import Web3 from "web3";
 import abi from "../assets/abi/proposal.json";
 import factoryAbi from "../assets/abi/factory.json";
 import erc20 from "../assets/abi/erc20.json";
-import {Log} from 'web3-core'
 import config from "../config/config";
 import {AbiItem} from 'web3-utils';
-import {fromWei, myAddress, notEmpty, toWei} from "../tools/tools";
+import {fromWei, myAddress, notEmpty, subscribeToEvent, toWei} from "../tools/tools";
 
 // Please run "npm run typechain" to generate the required code before building
 // import {proposalView} from "../types/proposalView";
 
 // typechain seems not working now. You can uncomment when the typechain-target-web3-v2 get released
+
+// const DEADLINE = 24 * 60 * 60;
+// const DEADLINE = 30;
 
 export enum State {
     ZS = "0",
@@ -36,6 +38,17 @@ export const avaliableFields = [
     "taskDeadline"
 ];
 
+const factoryContract = (web3: Web3) => {
+    return new web3.eth.Contract(factoryAbi, config.proposalFactoryAddress);
+};
+
+const tokenContract = (web3: Web3, address: string) => {
+    // @ts-ignore
+    const tokenAbi: AbiItem[] = erc20;
+    return new web3.eth.Contract(tokenAbi, address);
+};
+
+
 export default class Proposal {
 
     public address: string;
@@ -43,6 +56,7 @@ export default class Proposal {
     public arbiter!: string;
     public contractor!: string;
     public ipfsHash!: string;
+    public doneIpfsHash!: string;
     public arbiterTokenReward!: string;
     public contractorTokenReward!: string;
     public customer!: string;
@@ -53,38 +67,39 @@ export default class Proposal {
     public role: Role;
     public decimals: number;
 
-    private constructor(address: string) {
+    private onUpdate?: (proposal: Proposal) => any;
+
+    private constructor(address: string, onUpdate?: (proposal: Proposal) => any) {
+        this.onUpdate = onUpdate;
         this.address = address;
         this.decimals = 0;
         this.role = Role.None;
     }
 
-    static async all(web3: Web3): Promise<Proposal[]> {
+    static async fromAddress(web3: Web3, address: string, onUpdate?: (proposal: Proposal) => any) {
+        let proposal = new Proposal(address, onUpdate);
+        await proposal.update(web3);
+        return proposal;
+    };
 
-        let logs = await web3.eth.getPastLogs({
-            fromBlock: 0,
-            address: config.proposalFactoryAddress,
-        });
+    static subscribeToFactory(web3: Web3, onUpdateProposals: (proposals: Proposal[]) => any) {
+        const contract = factoryContract(web3);
 
-        let dataChunks = this.splitLogData(logs);
-
-        // get the 2-nd element of array (address of proposalView) and make it look like 0x...
-        let proposalAddresses = dataChunks
-            .map(chunk => chunk[1])
-            .map(chunk => "0x" + chunk.substr(24));
-
-        // console.log(proposalAddresses);
-
-        return (await Promise
-            .all(proposalAddresses
-                .map(async proposalAddress => {
+        subscribeToEvent(contract, 'ProposalCreated', events => {
+            Promise
+                .all(events.map(async event => {
                     try {
-                        return await Proposal.fromAddress(web3, proposalAddress)
+                        return await Proposal
+                            .fromAddress(web3, event.returnValues.proposalAddress, proposal =>
+                                onUpdateProposals([proposal])
+                            )
                     } catch (e) {
-                        return null
+                        // do nothing, bad proposal, maybe deleted
                     }
-                })))
-            .filter(notEmpty);
+                }))
+                .then(proposals => proposals.filter(notEmpty))
+                .then(proposals => onUpdateProposals(proposals));
+        });
     }
 
     public static async deploy(web3: Web3,
@@ -94,9 +109,9 @@ export default class Proposal {
                                token: string) {
 
         const from = await myAddress(web3);
-        let contract = this.factoryContract(web3);
+        let contract = factoryContract(web3);
 
-        let decimals = await this.tokenContract(web3, token).methods.decimals().call();
+        let decimals = await tokenContract(web3, token).methods.decimals().call();
 
         let method = contract.methods.createConfiguredProposal(
             toWei(arbiterReward, decimals),
@@ -108,38 +123,23 @@ export default class Proposal {
         return await method.send({from});
     }
 
-    private static factoryContract(web3: Web3) {
-        return new web3.eth.Contract(factoryAbi, config.proposalFactoryAddress);
+    public async prepay(web3: Web3) {
+        const from = await myAddress(web3);
+
+        // let reward = this.contractorTokenReward * Math.pow(10, this.decimals);
+        let numReward = Number(this.contractorTokenReward) + Number(this.arbiterTokenReward);
+        let reward = toWei(numReward.toString(), this.decimals);
+
+        await this.myTokenContract(web3).methods.approve(this.address, reward).send({from});
+        return await this.contract(web3).methods.pushToPrepaidState().send({from});
     }
 
-    private static tokenContract(web3: Web3, address: string) {
-        // @ts-ignore
-        const tokenAbi: AbiItem[] = erc20;
-        return new web3.eth.Contract(tokenAbi, address);
+    private contract(web3: Web3) {
+        return new web3.eth.Contract(abi, this.address);
     }
 
-    private static async fromAddress(web3: Web3, address: string) {
-        let proposal = new Proposal(address);
-        await proposal.update(web3);
-        return proposal;
-    }
 
-    private static splitLogData(logs: Log[]) {
-        return logs
-            .map(log => {
-                // remove the beginning 0x
-                let data = log.data.substr(2);
-
-                // try to split data into chunks of 64 symbols
-                try {
-                    return data.match(/.{1,64}/g)!!;
-                } catch (e) {
-                    return null;
-                }
-            })
-            // remove null items
-            .filter((d): d is string[] => d !== null);
-    }
+    /// Public methods
 
     public async close(web3: Web3) {
         const from = await myAddress(web3);
@@ -160,26 +160,14 @@ export default class Proposal {
         return await this.contract(web3).methods.responseToProposal(deadline, weiReward).send({from});
     }
 
-    public async prepay(web3: Web3) {
-        const from = await myAddress(web3);
-
-        // let reward = this.contractorTokenReward * Math.pow(10, this.decimals);
-        let numReward = Number(this.contractorTokenReward) + Number(this.arbiterTokenReward);
-        let reward = toWei(numReward.toString(), this.decimals);
-
-        await this.tokenContract(web3).methods.approve(this.address, reward).send({from});
-        return await this.contract(web3).methods.pushToPrepaidState().send({from});
-    }
-
-    private contract(web3: Web3) {
-        return new web3.eth.Contract(abi, this.address);
-    }
-
-    private tokenContract(web3: Web3) {
+    private myTokenContract(web3: Web3) {
         // @ts-ignore
         const tokenAbi: AbiItem[] = erc20;
         return new web3.eth.Contract(tokenAbi, this.proposalCurrencyToken);
     }
+
+
+    /// Constructing
 
     private async updateRole(web3: Web3) {
         let from = await myAddress(web3);
@@ -200,13 +188,28 @@ export default class Proposal {
         this.role = choose();
     }
 
-    private async updateIpfsHash(web3: Web3) {
-        let logs = await web3.eth.getPastLogs({
-            fromBlock: 0,
-            address: this.address,
+    private updateAndSubscribeEvents(web3: Web3): Promise<any> {
+        const contract = this.contract(web3);
+        return new Promise(resolve => {
+            subscribeToEvent(contract, 'allEvents', (events, onInit) => {
+                events.forEach(event => {
+                    const name = event.event;
+                    switch (name) {
+                        case "ProposalWasSetUp":
+                            this.ipfsHash = web3.utils.hexToAscii(event.returnValues.task);
+                            break;
+                        case "ProposalTaskWasDone":
+                            this.doneIpfsHash = web3.utils.hexToAscii(event.returnValues.solution);
+                            break;
+                    }
+                });
+                if (onInit)
+                    resolve();
+                if (!onInit && this.onUpdate) {
+                    this.onUpdate(this);
+                }
+            });
         });
-        let log = Proposal.splitLogData(logs)[0];
-        this.ipfsHash = web3.utils.hexToAscii("0x" + (log[4] + log[5]).substr(0, 92));
     }
 
     private async update(web3: Web3) {
@@ -216,14 +219,12 @@ export default class Proposal {
             this[methodName] = await m[methodName]().call();
         }));
 
-        this.decimals = await this.tokenContract(web3).methods.decimals().call();
-
+        this.decimals = await this.myTokenContract(web3).methods.decimals().call();
 
         this.contractorTokenReward = fromWei(this.contractorTokenReward, this.decimals);
         this.arbiterTokenReward = fromWei(this.arbiterTokenReward, this.decimals);
 
-
-        await this.updateIpfsHash(web3);
         await this.updateRole(web3);
+        await this.updateAndSubscribeEvents(web3);
     }
 };

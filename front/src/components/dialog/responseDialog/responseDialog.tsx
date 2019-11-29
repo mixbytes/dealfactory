@@ -30,7 +30,7 @@ const ResponseDialog: React.FC<Props & ReduxProps> = (props) => {
     const respond = function () {
         setLoading(true);
         const {deadline, reward} = formData;
-        proposal.respond(web3!, Number(deadline), reward).then(() => {
+        proposal.respond(web3!, Math.floor(Date.now() / 1000) + Number(deadline), reward).then(() => {
             setLoading(false);
             onSubmit();
         }).catch((e) => {
@@ -60,7 +60,7 @@ const ResponseDialog: React.FC<Props & ReduxProps> = (props) => {
                     onChange={(e) => setFormData({...formData, deadline: e.target.value})}
                     required
                     margin="dense"
-                    label="Deadline"
+                    label="Deadline (in seconds) from now"
                     fullWidth
                 />
                 <div style={{

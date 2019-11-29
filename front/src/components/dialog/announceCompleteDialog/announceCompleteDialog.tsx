@@ -35,7 +35,7 @@ const AnnounceCompleteDialog: React.FC<Props & ReduxProps> = (props) => {
     const announceComplete = function (meta: IpfsFileMeta) {
         proposal.announceComplete(web3!, meta.hash)
             .then(() => {
-                setProgress(0);
+                setProgress(100);
                 onSubmit();
             })
             .catch((e) => {
